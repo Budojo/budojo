@@ -1,4 +1,5 @@
 import { MOCK_ACADEMY, MOCK_ATHLETES_EMPTY } from '../support/fixtures';
+import { expectSpineClear } from '../support/athlete-identity';
 
 const MOCK_MONTHLY_PAYMENTS = Array.from({ length: 12 }, (_, i) => ({
   month: `2025-${String(i + 1).padStart(2, '0')}`,
@@ -100,5 +101,7 @@ describe('Stats — payments monthly revenue tab', () => {
       .should('contain.text', '4 months')
       .find('a')
       .should('have.attr', 'href', '/dashboard/athletes/12/payments');
+    // The belt clear of the face: with no padding, it lay over the avatar (#2191).
+    expectSpineClear();
   });
 });

@@ -50,7 +50,9 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0.5rem;
+  // 1rem on the left, as the check-in card: the spine sits in that padding,
+  // and with 0.5rem it touched the avatar (#2191).
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
   border-radius: var(--p-border-radius-md);
   cursor: pointer;
 

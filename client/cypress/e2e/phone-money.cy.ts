@@ -2,6 +2,7 @@ import { MOCK_ACADEMY } from '../support/fixtures';
 import { stubToday } from '../support/today';
 import { VIEWPORT_PIXEL_8_PRO } from '../support/viewports';
 import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
+import { expectSpineClear } from '../support/athlete-identity';
 
 /**
  * «Soldi» on the phone (#2132, PRD § 6.1): who still has to pay this month,
@@ -113,6 +114,11 @@ describe('Soldi on the phone (#2132)', () => {
     cy.get('main.main').should(($main) => {
       expect($main[0].scrollWidth).to.be.at.most($main[0].clientWidth);
     });
+  });
+
+  it('keeps the belt clear of the face on every row (#2191)', () => {
+    row(1).should('be.visible');
+    expectSpineClear();
   });
 
   it('takes the row off once paid, and the undo puts it back', () => {

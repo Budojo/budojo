@@ -20,4 +20,7 @@
   letter-spacing: 0;
   padding: 0.125rem 0.5rem;
   font-size: 0.75rem;
+  // «19 anni» is one value: squeezed, the chip keeps its width rather than
+  // break between the number and its unit (#2191).
+  white-space: nowrap;
 }
