@@ -1,4 +1,4 @@
-# Branch protection — rulesets + Copilot auto-review
+# Branch protection — rulesets
 
 ## What this covers
 
@@ -8,8 +8,6 @@ Two repository rulesets on `github.com/Budojo/budojo` that together:
 - Require all 9 CI jobs to be green before merge (`main` also requires «Whats-new pin matches expected release», 10 in all)
 - Do **not** require the PR branch to be up to date with its base. A branch behind develop merges as it is, and only a conflict (`DIRTY`) needs develop merged in. This is the live setting, checked 28 Sep 2026; these files said `true` until #2020.
 - Keep history linear (no merge-commit ziggurats)
-
-Plus a documented recipe for **Copilot auto-review**, which is a repo-level toggle (not a workflow) because GitHub's REST API silently ignores requests to add Copilot as a reviewer via `pulls.requestReviewers`.
 
 ## Files
 
@@ -46,23 +44,11 @@ All other rules are identical:
 
 **No bypass actors.** Even the repo owner goes through a PR. Emergency bypass is one UI click away (see below).
 
-## Copilot auto-review — enable in repo Settings, not via workflow
+## Copilot — not used
 
-GitHub exposes Copilot code review as a **repo-level toggle** in the web UI, not as something the standard `pulls.requestReviewers` REST API can populate:
+Copilot does not review Budojo's pull requests (#2189, Nov 2026). The one required review is [`/review-pr`](../../.claude/commands/review-pr.md).
 
-- The REST API responds **200 OK** to `POST /repos/{owner}/{repo}/pulls/{n}/requested_reviewers` with `reviewers: ["Copilot"]`, but silently drops the reviewer — the request is never persisted.
-- Passing the bot login `copilot-pull-request-reviewer` instead returns **422 "Reviews may only be requested from collaborators"** — Copilot is not a collaborator in the API sense.
-- The UI button ("Request review from Copilot") uses an internal path that is not publicly documented.
-
-Given that, the correct recipe is:
-
-1. Go to **Settings → Code & automation → Code review → Copilot Code Review**
-2. Enable **`Automatically request Copilot code review on pull request`**
-3. Save
-
-After that, every new PR (opened or re-opened, drafts skipped) gets Copilot assigned automatically, and Copilot begins reviewing within ~1–3 minutes. No workflow required; no GitHub App to install; the trigger is managed by GitHub and logged in the audit log.
-
-If GitHub ever ships a first-class API endpoint for assigning Copilot programmatically (or a ruleset rule of type `required_reviewer: copilot`), swap this recipe for the committed version at that point.
+No ruleset asks for it: `gh api repos/Budojo/budojo/rules/branches/develop` (and `main`) lists every active rule, the organisation's included, and none is `copilot_code_review`. If one ever appears there, or Copilot's automatic review is switched on again in the repository's or the owner's Copilot settings, switch it off.
 
 ## Applying / re-applying the rulesets
 

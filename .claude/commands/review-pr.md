@@ -5,7 +5,7 @@ argument-hint: '<PR#> [<old-head>..<new-head>] [--deep]'
 
 # /review-pr
 
-Launch the **`pr-reviewer`** agent (`.claude/agents/pr-reviewer.md`) on a pull request. It reads the diff against the canon, verifies each finding, and posts them on the PR as review threads, up to 5 per round. The `develop` and `main` rulesets require every thread resolved before a merge, so its findings block the merge until someone answers them, as Copilot's did.
+Launch the **`pr-reviewer`** agent (`.claude/agents/pr-reviewer.md`) on a pull request. It reads the diff against the canon, verifies each finding, and posts them on the PR as review threads, up to 5 per round. The `develop` and `main` rulesets require every thread resolved before a merge, so its findings block the merge until someone answers them. Copilot no longer reviews (#2189), so nothing else does.
 
 It is **the one required review** (#2020). Run it when the PR opens and after each fix round: it leaves the record on the PR and re-checks its own open threads. `/prereview` before the push is optional, for a large diff where an early read saves a CI round.
 
