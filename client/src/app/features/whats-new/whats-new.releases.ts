@@ -60,6 +60,25 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.81.1',
+    date: '2026-11-06',
+    headline: {
+      en: 'Nothing changes in the app.',
+      it: "Nell'app non cambia niente.",
+    },
+    sections: [
+      {
+        heading: { en: 'Phone', it: 'Telefono' },
+        bullets: [
+          {
+            en: 'The Android APK is attached to the release again, together with the PC installer. v2.81.0 came out without it, and the APK was added later.',
+            it: "L'APK per Android è di nuovo allegato alla versione, insieme all'installer per il PC. La v2.81.0 era uscita senza, e l'APK era stato aggiunto più tardi.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.81.0',
     date: '2026-11-05',
     headline: {
