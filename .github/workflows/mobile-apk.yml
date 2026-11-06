@@ -244,6 +244,16 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
 
+      # The test itself from the commit that runs this workflow, not from the
+      # tag: rebuilding an older tag's APK (installer_tag) otherwise runs that
+      # tag's smoke.sh, with whatever it got wrong. v2.81.0's could not read a
+      # sealed previous release, and its APK could not be attached (#2204).
+      # previous-apk.sh stays the tag's: it picks the release before the tag.
+      - uses: actions/checkout@v4
+        with:
+          path: workflow-ref
+          sparse-checkout: mobile/emulator
+
       - uses: actions/download-artifact@v4
         with:
           name: Budojo-Android-${{ env.VERSION_NAME }}
@@ -273,7 +283,7 @@ jobs:
       - name: Open the app and photograph each screen
         env:
           PREVIOUS_APK: ${{ steps.previous.outputs.apk }}
-        run: mobile/emulator/smoke.sh "$RUNNER_TEMP/apk/Budojo-Android-${VERSION_NAME}.apk" "$RUNNER_TEMP/shots" "$PREVIOUS_APK"
+        run: workflow-ref/mobile/emulator/smoke.sh "$RUNNER_TEMP/apk/Budojo-Android-${VERSION_NAME}.apk" "$RUNNER_TEMP/shots" "$PREVIOUS_APK"
 
       - uses: actions/upload-artifact@v4
         if: always()
