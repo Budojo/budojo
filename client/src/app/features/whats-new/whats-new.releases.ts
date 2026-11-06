@@ -63,16 +63,16 @@ export const RELEASES: readonly Release[] = [
     version: 'v2.81.1',
     date: '2026-11-06',
     headline: {
-      en: 'Nothing changes in the app. What changes is how the phone version is prepared.',
-      it: "Nell'app non cambia niente. Cambia come viene preparata la versione per il telefono.",
+      en: 'Nothing changes in the app.',
+      it: "Nell'app non cambia niente.",
     },
     sections: [
       {
         heading: { en: 'Phone', it: 'Telefono' },
         bullets: [
           {
-            en: "The Android APK comes with every release. v2.81.0 shipped without it, because the check that tries it on the emulator got stuck: the APK was added afterwards. The check now works when the previous version protects the academy's keys too, and the APK arrives together with the PC installer.",
-            it: "L'APK per Android è allegato a ogni versione. La v2.81.0 era uscita senza, perché il controllo che la prova sull'emulatore si bloccava: l'APK è stato aggiunto dopo. Ora il controllo funziona anche quando la versione precedente protegge le chiavi dell'accademia, e l'APK arriva insieme all'installer per il PC.",
+            en: 'The Android APK is attached to the release again, together with the PC installer. v2.81.0 came out without it, and the APK was added later.',
+            it: "L'APK per Android è di nuovo allegato alla versione, insieme all'installer per il PC. La v2.81.0 era uscita senza, e l'APK era stato aggiunto più tardi.",
           },
         ],
       },
