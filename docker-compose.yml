@@ -57,6 +57,11 @@ services:
       dockerfile: ../docker/client/Dockerfile
     container_name: budojo_client
     restart: unless-stopped
+    # Runs Docker's tini as PID 1. Without it PID 1 is `npm exec ng serve`,
+    # which never reaps orphaned children: every esbuild worker that outlives
+    # its parent stays a <defunct> zombie until the container restarts (29 of
+    # them after six days of `ng serve`).
+    init: true
     ports:
       - "4200:4200"
     volumes:
