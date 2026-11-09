@@ -9,8 +9,8 @@
     <p class="legal-page__eyebrow">Legale</p>
     <h1 class="legal-page__title">Informativa sulla Privacy</h1>
     <p class="legal-page__subtitle">
-      Informativa ai sensi dell'art. 13 del Regolamento UE 2016/679 (GDPR) per gli utenti del
-      servizio Budojo.
+      Chi è responsabile dei dati personali tenuti in Budojo, dove stanno e cosa esce dal
+      dispositivo.
     </p>
     <!-- Language toggle (#291). L'italiano è il source of truth legale
          per i clienti italiani e per il Garante; l'inglese è canonico
@@ -26,232 +26,218 @@
 
   <aside class="legal-page__notice" data-cy="privacy-draft-banner">
     <p>
-      <strong>Bozza tecnica — in revisione legale.</strong>
-      Il testo definitivo è in fase di revisione da parte di un legale. I fatti tecnici qui sotto
-      (responsabili del trattamento, regione di hosting, finestra di retention, sub-processor, base
-      giuridica) sono accurati e corrispondono a quanto effettivamente fatto in produzione. Il
-      legale potrà rivedere la formulazione, non i fatti tecnici.
+      <strong>Bozza tecnica — non rivista da un legale.</strong>
+      Nessun legale ha ancora rivisto questo testo. I fatti tecnici qui sotto (chi è titolare dei
+      dati, dove sono conservati, cosa esce dal dispositivo, quali terze parti l'app contatta)
+      corrispondono a quello che l'app fa oggi. Una revisione legale potrà cambiarne la
+      formulazione, non i fatti.
     </p>
   </aside>
 
   <section class="legal-page__section">
-    <h2>1. Titolare del trattamento</h2>
+    <h2>1. Chi è titolare dei dati</h2>
     <p>
-      <strong>Budojo</strong> — sito web
-      <a href="https://budojo.it" target="_blank" rel="noopener noreferrer">budojo.it</a>. Email per
-      richieste privacy:
-      <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>
-      <em>(da confermare in fase di revisione legale)</em>.
+      Ogni palestra che usa Budojo è <strong>titolare del trattamento</strong> dei propri dati e dei
+      dati dei propri atleti. Decide cosa registrare, perché, su quale base giuridica e per quanto
+      tempo, e dà ai propri atleti la propria informativa.
     </p>
     <p>
-      In molti scenari d'uso, il vero titolare del trattamento dei dati degli atleti è la palestra
-      (academy) che usa Budojo come gestionale: in tal caso Budojo opera come
-      <strong>responsabile del trattamento</strong>, secondo i termini del DPA fra Budojo e
-      l'academy. La presente informativa copre invece il trattamento per cui Budojo è
-      <strong>direttamente titolare</strong>: la registrazione e gestione del rapporto con l'utente
-      che apre l'account.
+      Budojo è un software che gira sui dispositivi della palestra.
+      <strong
+        >Budojo e il suo autore non ricevono nessuno di quei dati e non ne sono responsabili del
+        trattamento.</strong
+      >
+      Questa pagina descrive cosa fa il software con i dati su quei dispositivi, così che la
+      palestra possa descriverlo a sua volta.
+    </p>
+    <p>
+      Domande sul software:
+      <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>2. Categorie di dati raccolti</h2>
-    <p>
-      Budojo raccoglie ed elabora esclusivamente i dati necessari al funzionamento del Servizio:
-    </p>
+    <h2>2. Dove stanno i dati</h2>
     <ul>
-      <li><strong>Dati identificativi e di contatto</strong> — nome, cognome, email.</li>
       <li>
-        <strong>Credenziali</strong> — hash bcrypt della password, token Sanctum opachi (mai testo
-        in chiaro).
+        <strong>Sul PC</strong> — un'app Windows. Tutto quello che salva sta in
+        <code>%APPDATA%\Budojo\</code> su quel computer: il database, i documenti, i backup e i log.
       </li>
       <li>
-        <strong>Dati dell'academy</strong> — nome palestra, indirizzo, recapiti telefonici, link ai
-        contatti.
+        <strong>Sul telefono</strong> — un'app Android. I suoi dati stanno nella memoria privata
+        dell'app, esclusi dal backup cloud di Android e dal trasferimento su un telefono nuovo.
       </li>
       <li>
-        <strong>Dati degli atleti</strong> — nome, cognome, data di nascita, cintura, status di
-        tesseramento, recapiti dei tutori per i minori.
-      </li>
-      <li><strong>Dati di presenza</strong> — date di check-in degli atleti agli allenamenti.</li>
-      <li>
-        <strong>Documenti caricati</strong> — certificati medici, tesseramenti, documenti
-        d'identità.
-      </li>
-      <li>
-        <strong>Metadati tecnici</strong> — IP, user-agent, timestamp, limitatamente a sicurezza e
-        diagnostica.
+        <strong>Budojo non gestisce nessun server.</strong> La versione ospitata di Budojo è stata
+        spenta.
       </li>
     </ul>
-    <p>
-      Budojo <strong>non raccoglie</strong> dati di geolocalizzazione, identificatori pubblicitari,
-      o cookie di tracciamento di terze parti.
-    </p>
-  </section>
-
-  <section class="legal-page__section">
-    <h2>3. Finalità e base giuridica del trattamento</h2>
-    <div class="legal-page__table-wrapper">
-      <table class="legal-page__table">
-        <thead>
-          <tr>
-            <th>Finalità</th>
-            <th>Base giuridica (art. 6 GDPR)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Erogazione del Servizio richiesto dall'utente</td>
-            <td>Esecuzione di un contratto (art. 6.1.b)</td>
-          </tr>
-          <tr>
-            <td>Gestione del rapporto contrattuale, fatturazione, comunicazioni di servizio</td>
-            <td>Esecuzione di un contratto (art. 6.1.b)</td>
-          </tr>
-          <tr>
-            <td>Adempimenti fiscali e contabili</td>
-            <td>Obbligo di legge (art. 6.1.c)</td>
-          </tr>
-          <tr>
-            <td>Sicurezza dell'infrastruttura, prevenzione abusi, log diagnostici</td>
-            <td>Legittimo interesse (art. 6.1.f)</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <section class="legal-page__section">
-    <h2>4. Periodo di conservazione</h2>
+    <p>Cosa salva l'app, come la palestra lo inserisce:</p>
     <ul>
-      <li><strong>Account utente attivo</strong> — per tutta la durata del rapporto.</li>
+      <li><strong>Il profilo del titolare</strong> — nome, email, foto.</li>
+      <li><strong>La palestra</strong> — nome, indirizzo, recapiti, logo, orari, quote.</li>
       <li>
-        <strong>Account in cancellazione</strong> — finestra di grace di 30 giorni durante i quali
-        l'utente può annullare la richiesta. Dopo tale finestra l'account è cancellato in modo
-        irreversibile.
+        <strong>Gli atleti</strong> — nome, recapiti, data e luogo di nascita, codice fiscale, sesso
+        come sul documento, indirizzo, foto, cintura e stato.
       </li>
       <li>
-        <strong>Dati di fatturazione e contabilità</strong> — 10 anni dalla data di emissione
-        (obbligo art. 2220 c.c.).
+        <strong>L'attività</strong> — presenze, pagamenti, promozioni di cintura, note delle
+        lezioni.
       </li>
-      <li><strong>Log applicativi</strong> — massimo 12 mesi.</li>
       <li>
-        <strong>Cronologia accessi all'account</strong> (timestamp, indirizzo IP, user-agent, esito
-        riuscito / fallito) — <strong>90 giorni</strong>, poi cancellazione automatica. Puoi
-        consultare i tuoi ultimi 50 tentativi di accesso dalla pagina del profilo per individuare
-        accessi sospetti.
+        <strong>I documenti</strong> — certificati medici, documenti d'identità, assicurazioni e
+        altri file. I certificati medici sono dati relativi alla salute (art. 9 GDPR).
       </li>
     </ul>
   </section>
 
   <section class="legal-page__section">
-    <h2>5. Modalità di trattamento e misure di sicurezza</h2>
-    <p>
-      I dati sono trattati con strumenti elettronici e ospitati in
-      <strong>datacenter UE (Frankfurt — DigitalOcean <code>fra1</code>)</strong>. Misure adottate:
-    </p>
+    <h2>3. Cosa esce dal dispositivo</h2>
     <ul>
-      <li>Trasmissione cifrata TLS 1.2+ per ogni richiesta.</li>
-      <li>Password salvate solo come hash bcrypt.</li>
-      <li>Autenticazione tramite token Bearer (Laravel Sanctum), nessun cookie di sessione.</li>
-      <li>Accessi amministrativi via SSH con autenticazione a chiave.</li>
-      <li>Audit periodico dei sub-processor.</li>
       <li>
-        Piano di backup automatizzato della base dati
-        <strong>in implementazione prima della raccolta di dati reali in produzione</strong>.
+        <strong>A Budojo non arriva niente.</strong> L'app non invia telemetria, statistiche d'uso
+        né segnalazioni di crash. I suoi log restano sul dispositivo.
+      </li>
+      <li>
+        <strong>Niente email e niente push.</strong> L'app non invia email, e i promemoria del
+        telefono sono programmati sul telefono stesso.
+      </li>
+      <li>
+        <strong>Google, solo se la palestra collega il proprio account Google</strong> — per la
+        copia dei backup e la sincronizzazione fra PC e telefono (§ 4).
+      </li>
+      <li>
+        <strong>Una cartella dei backup, solo se il titolare ne sceglie una</strong> — il PC ci
+        copia ogni backup: una chiavetta USB, un disco di rete, o una cartella sincronizzata da un
+        servizio cloud. Quel servizio è una scelta della palestra.
+      </li>
+      <li>
+        <strong>GitHub, per gli aggiornamenti</strong> — il PC e il telefono chiedono a GitHub se
+        c'è una versione nuova, e il PC la scarica da lì. GitHub vede l'indirizzo IP e lo user agent
+        del dispositivo; nessun dato della palestra viene inviato.
+      </li>
+      <li>
+        <strong>I link che il titolare apre</strong> — il link al video di una tecnica o un pulsante
+        WhatsApp si apre nel browser o nell'app del dispositivo, solo al clic.
       </li>
     </ul>
     <p>
-      I certificati medici, in quanto dati relativi alla salute (art. 9 GDPR), sono oggetto di una
-      valutazione separata documentata in
-      <code>docs/legal/dpia-medical-certificates.md</code>.
+      Chi è ciascuno e cosa vede:
+      <a routerLink="/sub-processors/it">Sub-processor e terze parti</a>.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>6. Cookie e archiviazione lato browser</h2>
+    <h2>4. Google Drive: backup e sincronizzazione</h2>
     <p>
-      Budojo <strong>non usa cookie di tracciamento</strong> né cookie di profilazione di terze
-      parti.
+      Sono entrambi facoltativi e usano l'account Google della palestra, secondo l'accordo fra la
+      palestra e Google. Il trattamento di Google, e dove avviene, ricadono in quell'accordo.
     </p>
     <ul>
-      <li><strong>Cookie HTTP:</strong> nessuno.</li>
       <li>
-        <strong>localStorage:</strong> quattro chiavi tecniche — <code>auth_token</code> (token di
-        sessione Sanctum, strettamente necessario per mantenere l'autenticazione),
-        <code>budojoLang</code> (lingua di interfaccia selezionata — `en` / `it`),
-        <code>budojoCookieConsent</code> (registrazione del consenso dell'utente per le categorie
-        non essenziali, scritta dal cookie banner) e <code>documents.showCancelled</code>
-        (preferenza UI sul filtro documenti). Nessuna identifica o profila l'utente.
+        <strong>Backup.</strong> Ogni backup del PC (ogni 6 ore mentre l'app è aperta) viene
+        caricato in una cartella <code>Budojo</code> di quel Drive, con lo scope
+        <code>drive.file</code>: l'app vede solo i file che ha creato. Un archivio contiene il
+        database, in gran parte in chiaro, e i documenti, che restano cifrati.
       </li>
-      <li><strong>sessionStorage / IndexedDB:</strong> nessuno usato direttamente dalla SPA.</li>
+      <li>
+        <strong>Sincronizzazione fra PC e telefono.</strong> I due dispositivi si scambiano i dati
+        attraverso lo stesso Drive. Ogni file è sigillato con AES-256-GCM sotto la chiave di
+        sincronizzazione della palestra.
+      </li>
+      <li>
+        <strong>Le chiavi.</strong> La chiave di sincronizzazione e le chiavi che aprono i documenti
+        stanno nei dati nascosti dell'applicazione nell'account Google (scope
+        <code>drive.appdata</code>), così il telefono apre la palestra dopo l'accesso con Google.
+      </li>
     </ul>
     <p>
-      Il dettaglio delle categorie, le chiavi attuali e come revisionare il consenso sono su
-      <a routerLink="/cookie-policy/it">Cookie Policy</a>. L'audit tecnico completo, con la
-      metodologia di verifica e il record dei controlli, è documentato in
-      <code>docs/legal/cookie-audit.md</code> all'interno del nostro repository sorgente; una
-      richiesta scritta a <a href="mailto:privacy@budojo.it">privacy@budojo.it</a> ottiene la copia
-      corrente.
+      <strong>Chi controlla quell'account Google può leggere i dati della palestra:</strong> il
+      database nei backup è in gran parte in chiaro, e una volta collegato il telefono le chiavi lì
+      accanto aprono tutto il resto, certificati medici compresi. Tieni attiva la verifica in due
+      passaggi di Google.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>7. Destinatari dei dati — sub-processor</h2>
-    <p>
-      I dati possono essere trasmessi ai seguenti soggetti come sub-responsabili del trattamento. La
-      lista canonica e aggiornata è pubblicata su
-      <a routerLink="/sub-processors">/sub-processors</a>:
-    </p>
-    <ul>
-      <li><strong>Cloudflare, Inc.</strong> — DNS, edge proxy / CDN, TLS termination.</li>
-      <li><strong>DigitalOcean, LLC</strong> — VM hosting (regione UE, Frankfurt).</li>
-      <li><strong>Laravel Forge / Tighten Co.</strong> — automazione di provisioning e deploy.</li>
-    </ul>
-    <p>
-      Ogni modifica dell'elenco è preceduta da un preavviso di 30 giorni all'academy. I dati non
-      vengono ceduti né venduti a terzi per finalità di marketing o profilazione.
-    </p>
-  </section>
-
-  <section class="legal-page__section">
-    <h2>8. Trasferimenti extra-UE</h2>
-    <p>
-      I dati personali sono conservati in UE (DigitalOcean Frankfurt). Cloudflare opera
-      un'infrastruttura globale di edge node: il traffico HTTP transita su PoP geograficamente
-      vicini all'utente, con garanzie di trasferimento rette dalle Standard Contractual Clauses
-      (SCC) della Commissione UE.
-    </p>
-  </section>
-
-  <section class="legal-page__section">
-    <h2>9. Diritti dell'interessato</h2>
-    <p>In ogni momento puoi esercitare i diritti previsti dagli articoli 15–22 GDPR:</p>
+    <h2>5. Misure di sicurezza</h2>
     <ul>
       <li>
-        <strong>Accesso ai dati</strong> (art. 15) — esporta tramite la sezione "Profilo" (JSON +
-        ZIP coi documenti).
-      </li>
-      <li><strong>Rettifica</strong> (art. 16) — modifica direttamente dalla sezione "Profilo".</li>
-      <li>
-        <strong>Cancellazione</strong> (art. 17) — pulsante "Elimina account" dalla sezione
-        "Profilo"; finestra di grace di 30 giorni.
+        I documenti, certificati medici compresi, sono cifrati a riposo con la chiave dei documenti
+        della palestra.
       </li>
       <li>
-        <strong>Limitazione</strong> (art. 18) — email a
-        <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>.
+        Sul PC, le chiavi, il token di accesso e il token di aggiornamento di Google sono cifrati
+        con il portachiavi di Windows (DPAPI), legato all'account utente di Windows. Il database
+        invece è in gran parte in chiaro: a proteggerlo è l'accesso a quell'account di Windows.
       </li>
-      <li><strong>Portabilità</strong> (art. 20) — l'export è in formato JSON aperto.</li>
       <li>
-        <strong>Opposizione</strong> (art. 21) — email a
-        <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>.
+        Sul telefono, le chiavi sono sigillate dall'Android Keystore, e l'app chiede l'impronta
+        quando si apre. I promemoria mostrano il testo intero sulla schermata di blocco, nomi e
+        importi compresi.
+      </li>
+      <li>
+        Gli archivi di backup non contengono chiavi. Per aprire i documenti su un computer nuovo
+        serve il codice di recupero.
       </li>
     </ul>
   </section>
 
   <section class="legal-page__section">
-    <h2>10. Reclamo all'autorità di controllo</h2>
+    <h2>6. Periodo di conservazione</h2>
+    <ul>
+      <li>La palestra decide per quanto tenere i propri dati, e li cancella dall'app.</li>
+      <li>
+        Sul PC, i certificati medici scaduti da più di 24 mesi vengono cancellati in automatico.
+      </li>
+      <li>
+        Rimuovere un atleta lo toglie dall'elenco e ne cancella i documenti; la sua scheda e il suo
+        storico restano.
+      </li>
+      <li>
+        I backup tengono circa due settimane di storia: i sei più recenti, poi l'ultimo di ciascuno
+        dei 14 giorni più recenti in cui l'app è stata aperta. Quello che cancelli nell'app resta
+        nei backup più vecchi, sul PC, nella cartella dei backup e su Drive, finché non ruotano via.
+        Fa eccezione la cartella della sincronizzazione su Drive (<code>Budojo/sync</code>): tiene
+        la prima versione della palestra, una copia completa del database con i suoi documenti,
+        finché il titolare non cancella quella cartella.
+      </li>
+      <li>
+        Disinstallare non cancella i dati. Come rimuoverli:
+        <a routerLink="/account-deletion/it">Cancellazione dell'account</a>.
+      </li>
+    </ul>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>7. Cookie e dati salvati sul dispositivo</h2>
     <p>
-      Hai diritto di proporre reclamo all'autorità di controllo competente: per l'Italia il
+      Budojo <strong>non imposta cookie</strong> e non fa tracciamento né profilazione. L'app tiene
+      alcuni valori tecnici nella propria memoria sul dispositivo: la lingua, il tema, i dati di
+      servizio della sincronizzazione e una preferenza di visualizzazione; sul telefono, anche il
+      token di accesso. L'elenco completo è nella
+      <a routerLink="/cookie-policy/it">Cookie Policy</a>.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>8. Diritti dell'interessato</h2>
+    <p>
+      Gli atleti esercitano i loro diritti GDPR (articoli 15–22)
+      <strong>presso la palestra</strong>, che è il titolare. Budojo non ha nessuno dei loro dati e
+      non può rispondere al posto della palestra.
+    </p>
+    <p>
+      L'app aiuta la palestra a rispondere: mostra e corregge la scheda di un atleta, rimuove un
+      atleta, e sul PC esporta i dati della palestra con i documenti in un file ZIP («Impostazioni →
+      Account → Scarica i miei dati»).
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>9. Reclamo all'autorità di controllo</h2>
+    <p>
+      Chiunque può proporre reclamo all'autorità di controllo competente: per l'Italia il
       <strong>Garante per la protezione dei dati personali</strong>, via
       <a href="https://www.garanteprivacy.it" target="_blank" rel="noopener noreferrer"
         >garanteprivacy.it</a
@@ -260,11 +246,10 @@
   </section>
 
   <section class="legal-page__section">
-    <h2>11. Modifiche all'informativa</h2>
+    <h2>10. Modifiche a questa pagina</h2>
     <p>
-      Eventuali modifiche sostanziali saranno notificate all'utente via email almeno 30 giorni prima
-      dell'entrata in vigore. Il numero di versione e la data dell'ultima modifica sono pubblicati
-      qui sotto.
+      Questa pagina è parte dell'app: una modifica arriva con un aggiornamento, e il numero di
+      versione e la data qui sotto cambiano con lei.
     </p>
   </section>
 

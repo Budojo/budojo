@@ -38,8 +38,8 @@ import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-g
 export class AccountDeletionComponent {
   private readonly router = inject(Router);
 
-  protected readonly version = '1.0';
-  protected readonly lastUpdated = '2026-05-13';
+  protected readonly version = '2.0';
+  protected readonly lastUpdated = '2026-11-09';
 
   goHome(): void {
     this.router.navigateByUrl('/');

@@ -9,8 +9,7 @@
     <p class="legal-page__eyebrow">Legal</p>
     <h1 class="legal-page__title">Account deletion</h1>
     <p class="legal-page__subtitle">
-      How to request permanent deletion of your Budojo account and the data we hold about you, what
-      is deleted, and what is retained.
+      How to remove Budojo and the academy's data from your devices and from your Google account.
     </p>
     <!-- Language toggle (#688). EN is the canonical default; IT lives
          at /account-deletion/it. Italian remains the legal source of
@@ -24,138 +23,111 @@
   </header>
 
   <section class="legal-page__section">
-    <h2>1. About Budojo</h2>
+    <h2>1. There is no Budojo account to close</h2>
     <p>
-      <strong>Budojo</strong> — website
-      <a href="https://budojo.it" target="_blank" rel="noopener noreferrer">budojo.it</a> — is a web
-      application that helps martial-arts academies manage their roster, attendance, documents,
-      payments, and community feed. This page describes how to request the permanent deletion of
-      your Budojo account and the personal data associated with it, in accordance with Article 17 of
-      EU Regulation 2016/679 (GDPR).
+      <strong>Budojo</strong> is a Windows and Android app that runs on the academy's own devices.
+      No account lives on a Budojo server, and Budojo receives none of the data. So deleting means
+      deleting the data where it is: on the PC, on the phone, and in the academy's Google account if
+      it was connected.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>2. How to request deletion</h2>
-    <h3>Today — by email</h3>
-    <p>
-      Write to
-      <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>
-      from the email address you registered with. Subject line "Account deletion". Include your
-      registered name so we can match the request to a single account. We confirm receipt within
-      five working days and initiate the deletion on your behalf. The 30-day grace window (see § 5)
-      starts at confirmation.
-    </p>
-    <h3>Coming soon — from the app</h3>
-    <p>
-      A "Delete account" entry will land in your
-      <a routerLink="/dashboard/profile">profile page</a>
-      in a follow-up release. The in-app flow re-authenticates with your current password and goes
-      through the same 30-day grace window.
-      <strong>This UI is not yet shipped</strong>; the email path above is the canonical request
-      channel today.
-    </p>
-  </section>
-
-  <section class="legal-page__section">
-    <h2>3. What is deleted</h2>
-    <p>
-      Once the grace window elapses, an hourly background job runs a hard-delete cascade. The
-      following is permanently removed from the database and from file storage:
-    </p>
+    <h2>2. Before you delete</h2>
     <ul>
       <li>
-        <strong>User account</strong> — first name, last name, display handle, email, phone, postal
-        address, date of birth, avatar photo, password hash, API tokens, two-factor secret and
-        recovery codes, active sessions, push notification subscriptions, notification and language
-        preferences, login history rows.
+        If there is any chance you will want the data back, take a backup first (Data &amp; backup →
+        Back up now) and keep it somewhere safe, with your recovery code.
       </li>
       <li>
-        <strong>Academy</strong> — if you are the registered owner: academy name, logo, address,
-        contact phone, email, URLs.
-      </li>
-      <li>
-        <strong>Athletes</strong> — every athlete belonging to your academy, including any
-        previously archived athletes: anagrafica, profile photos, every uploaded document (medical
-        certificates, federation cards, ID scans), attendance history, payment history, belt
-        promotion history.
-      </li>
-      <li>
-        <strong>Community feed</strong> — posts, comments, RSVPs, and reactions authored under your
-        account.
+        To keep a readable copy, on the PC: Settings → Account → Download my data saves a ZIP file
+        with the academy's data and documents.
       </li>
     </ul>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>3. On the PC</h2>
+    <ol>
+      <li>
+        If Google Drive is connected: in Data &amp; backup, choose <strong>Disconnect</strong> under
+        Google Drive backup. The copies stop; the backups already on Drive stay until you delete
+        them (§ 5).
+      </li>
+      <li>Uninstall Budojo from Windows.</li>
+      <li>
+        Delete the folder <code>%APPDATA%\Budojo\</code>.
+        <strong>Uninstalling does not touch it:</strong> it holds the database, the documents, the
+        local backups, the logs and the keys.
+      </li>
+      <li>
+        Delete the archives in the backup folder, if you chose one: a USB stick, a network drive, a
+        synced folder. Uninstalling leaves them there.
+      </li>
+    </ol>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>4. On the phone</h2>
     <p>
-      Binary files on disk (logos, avatars, athlete photos, documents) are wiped after the database
-      cascade commits, so the database state and the file system stay consistent.
+      Uninstall Budojo. Its data lives only in the app's private storage, excluded from Android's
+      cloud backup and from the transfer to a new phone, so no copy of it stays on Android's side.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>4. What is retained</h2>
-    <p>The following residual data is kept for a strictly limited time:</p>
+    <h2>5. In the academy's Google account</h2>
+    <p>Only if the academy connected Google Drive:</p>
     <ul>
-      <li><strong>Application logs</strong> — at most 30 days, for fraud and abuse review.</li>
-      <li><strong>CDN access logs</strong> (Cloudflare) — at most 30 days, same purpose.</li>
       <li>
-        <strong>Database backups</strong> — at most 30 days from the deletion, on automatic
-        rotation.
+        Delete the <code>Budojo</code> folder in Google Drive: the backups and the sync files. Then
+        empty Drive's trash.
       </li>
-      <li><strong>Outbound email archives</strong> at the email provider — at most 30 days.</li>
+      <li>
+        Delete Budojo's hidden app data, where the keys are: in Google Drive's settings, under
+        Manage apps.
+      </li>
+      <li>Remove Budojo's access from the Google account's security settings.</li>
     </ul>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>6. What Budojo keeps</h2>
     <p>
-      None of the above is exposed in the application; none is used to reconstruct an account or
-      contact you after deletion. No personally identifiable data is retained beyond these windows.
+      Nothing. Budojo operates no server and keeps no copy, log or backup of the academy's data.
+      Update checks reach GitHub, which sees the device's IP address and never any academy data.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>5. Grace window — 30 days</h2>
+    <h2>7. When an athlete asks to be erased</h2>
     <p>
-      When you make the request, Budojo records the date and schedules the actual deletion 30 days
-      later. During this window:
+      Athletes exercise their right to erasure (GDPR Art. 17) <strong>with the academy</strong>, the
+      controller, not with Budojo.
     </p>
     <ul>
       <li>
-        You can cancel the deletion at any time by clicking the link in the deletion confirmation
-        email (token-bound public link, no login required from the click) or by visiting your
-        dashboard, where a banner offers a one-click cancellation.
+        Removing an athlete in the app takes them off the roster and deletes their documents. Their
+        record and history (attendance, payments, belts) stay in the database.
       </li>
       <li>
-        Your account stays fully functional — login, dashboard access, and authenticated API calls
-        all still work. The banner is the only visible signal.
-      </li>
-      <li>
-        Re-clicking the delete button while a request is already pending is a no-op — the scheduled
-        date is not extended.
+        Older backups keep the data until they rotate out: about two weeks of the app being open.
+        With the phone sync on, the <code>Budojo/sync</code> folder on Drive also keeps the
+        academy's first version, a full copy of the database with its documents, until the owner
+        deletes that folder.
       </li>
     </ul>
-    <p>
-      After the 30 days elapse, an hourly background job runs the cascade. Once that runs, the
-      deletion is irreversible.
-    </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>6. Export your data before deletion</h2>
-    <p>
-      Budojo exposes a one-click JSON export of your personal data through the authenticated
-      <code>GET /api/v1/me/export</code> endpoint. The dashboard surfaces this as an "Export my
-      data" button — exercise of your GDPR Art. 15 right of access and Art. 20 right of portability.
-      We recommend running an export before confirming a deletion, because the data is unrecoverable
-      after the grace window elapses.
-    </p>
-  </section>
-
-  <section class="legal-page__section">
-    <h2>7. Contact</h2>
+    <h2>8. Contact</h2>
     <ul>
       <li>
-        <strong>Privacy and deletion requests</strong> —
+        <strong>Questions about the software</strong> —
         <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>
       </li>
       <li>
-        <strong>Data controller details</strong> — see the
+        <strong>Who controls the data</strong> — see the
         <a routerLink="/privacy">Privacy Policy</a>
         (English) or the
         <a routerLink="/privacy/it">Informativa sulla Privacy</a>

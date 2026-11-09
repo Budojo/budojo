@@ -5,6 +5,12 @@
 
 Versione: 0.1 (bozza) · Ultima modifica: 2026-04-30
 
+> **Non si applica all'app di oggi (9 nov 2026, #1255).** Budojo gira sui dispositivi della palestra e non
+> riceve i dati: non è responsabile del trattamento, non ha sub-processor, e non c'è un DPA da firmare. Lo
+> stack ospitato che questo testo descrive (Cloudflare, DigitalOcean, Laravel Forge) è stato dismesso in
+> #1230. Il testo resta com'era finché #227 non decide se archiviarlo; i fatti di oggi sono in
+> [`privacy-policy.md`](./privacy-policy.md) e [`sub-processors.md`](./sub-processors.md).
+
 ---
 
 ## Cos'è questo documento

@@ -16,21 +16,21 @@ describe('SubProcessorsItComponent — Italian /sub-processors/it (#280)', () =>
     return { fixture, cmp: fixture.componentInstance };
   }
 
-  it('renders the Italian page title and the three current sub-processors', () => {
+  it('renders the Italian page title and the three third parties the app contacts', () => {
     const { fixture } = setup();
     const root: HTMLElement = fixture.nativeElement;
 
     expect(root.querySelector('.legal-page__title')?.textContent?.trim()).toBe('Sub-processor');
 
-    // Same vendor list as the English page — pinning all three names so a
-    // drift between EN and IT (or a vendor change) trips the test.
-    const text = root.textContent ?? '';
-    expect(text).toContain('Cloudflare');
-    expect(text).toContain('DigitalOcean');
-    expect(text).toContain('Laravel Forge');
-
-    const rows = root.querySelectorAll('[data-cy="sub-processors-current"] tbody tr');
+    // Same rows as the English page, in the same order — so a drift
+    // between EN and IT (or a new third party) trips the test.
+    const rows = [
+      ...root.querySelectorAll('[data-cy="sub-processors-third-parties"] tbody tr'),
+    ].map((row) => (row.querySelector('td')?.textContent ?? '').replace(/\s+/g, ' '));
     expect(rows.length).toBe(3);
+    expect(rows[0]).toContain('Google');
+    expect(rows[1]).toContain('GitHub');
+    expect(rows[2]).toContain('link che il titolare apre');
   });
 
   it('language toggle points to the canonical English /sub-processors', () => {
