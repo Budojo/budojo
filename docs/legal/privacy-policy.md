@@ -1,7 +1,7 @@
 # Informativa sulla Privacy (#219, #1255)
 
-> **STATO: BOZZA TECNICA — IN REVISIONE LEGALE.**
-> Il testo definitivo è in fase di revisione da parte di un legale. I fatti tecnici sotto (chi è titolare dei dati, dove sono conservati, cosa esce dal dispositivo, quali terze parti l'app contatta) corrispondono a quello che l'app fa oggi. Il legale potrà rivedere la formulazione, non i fatti tecnici (che richiederebbero una modifica del software prima di un cambio del documento).
+> **STATO: BOZZA TECNICA — NON RIVISTA DA UN LEGALE.**
+> Nessun legale ha ancora rivisto questo testo (`decisioni-aperte.md` D3). I fatti tecnici sotto (chi è titolare dei dati, dove sono conservati, cosa esce dal dispositivo, quali terze parti l'app contatta) corrispondono a quello che l'app fa oggi. Una revisione legale potrà cambiarne la formulazione, non i fatti tecnici (che richiederebbero una modifica del software prima di un cambio del documento).
 
 Versione: 0.2 (bozza) · Ultima modifica: 2026-11-09
 
@@ -15,7 +15,7 @@ Ogni palestra che usa Budojo è **titolare del trattamento** dei propri dati e d
 
 Budojo è un software che gira sui dispositivi della palestra. **Budojo e il suo autore non ricevono nessuno di quei dati e non ne sono responsabili del trattamento** (decisione del titolare del progetto, 9 novembre 2026, #1255). Questa pagina descrive cosa fa il software con i dati su quei dispositivi, così che la palestra possa descriverlo a sua volta.
 
-Domande sul software: privacy@budojo.it _(da confermare in fase di revisione legale)_.
+Domande sul software: privacy@budojo.it.
 
 ## 2. Dove stanno i dati
 
