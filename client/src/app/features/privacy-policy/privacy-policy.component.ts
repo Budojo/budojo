@@ -15,8 +15,7 @@ import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-g
  * SubProcessors page documents:
  *
  *   1. `docs/legal/privacy-policy.md` — the canonical, auditor-readable
- *      markdown source. Auditors, the Garante, and the lawyer review
- *      this raw.
+ *      markdown source, the one an auditor or a lawyer would read.
  *   2. This component's HTML — English rendering, what an arbitrary
  *      visitor sees at /privacy.
  *   3. `it/privacy-policy-it.component.html` — Italian rendering at
