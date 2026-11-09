@@ -112,7 +112,7 @@ The SPA runs `@ngx-translate/core` with a synchronous bundled-JSON loader. EN is
 - **Don't dynamically build translation keys with template strings** (`'errors.' + code`) without an explicit map of allowed keys — the JSON parity check can't see them and the IT translation drifts silently.
 - **The parity check confirms key sets match, NOT that template paths resolve.** A typo in a template ships green and renders the raw key on prod. The usual victims are empty-state / error branches that specs don't cover.
 
-Roadmap (#271) adds Spanish + German next; framework is multi-locale-ready.
+Spanish and German (#271) are frozen: nobody needs them on a single-owner app. The framework is multi-locale-ready, so a third locale stays cheap the day someone asks.
 
 ### The anti-slop check (#1786)
 

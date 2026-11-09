@@ -198,7 +198,7 @@ Nothing waits for the sync, and its state is always on screen (§ 6.2).
   - `DriveRemote` on the phone, which makes the Drive calls from the WebView;
   - on the PC, the main process's Drive calls, reached over the bridge (§ 5.6, #2032);
   - `MemoryRemote` for the tests, where two copies sync with no Google account;
-  - **for development,** the PC's bridge remote can point at a local folder instead of Drive (`FolderRemote`, #2032), so two running copies sync on Linux with no Google account.
+  - **for development,** the PC's bridge remote could point at a local folder instead of Drive (`FolderRemote`), so two running copies sync on Linux with no Google account. **Not built:** #2032 closed without it on 9 Nov 2026, and only the tests' `MemoryRemote` exists.
 
 ### 5.4 «Accedi con Google» is the door, and the gym comes back by itself
 
