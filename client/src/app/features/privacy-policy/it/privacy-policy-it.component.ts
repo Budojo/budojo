@@ -42,8 +42,8 @@ import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/bran
 export class PrivacyPolicyItComponent {
   private readonly router = inject(Router);
 
-  protected readonly version = '0.1 (bozza)';
-  protected readonly lastUpdated = '2026-04-30';
+  protected readonly version = '0.2 (bozza)';
+  protected readonly lastUpdated = '2026-11-09';
 
   goHome(): void {
     this.router.navigateByUrl('/');

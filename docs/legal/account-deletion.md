@@ -2,91 +2,58 @@
 
 Canonical English source — auditor- and reviewer-readable. Two SPA components mirror this content per the standing lock-step rule (`/privacy{,/it}` is the precedent): edits here MUST land in the same PR as `client/src/app/features/account-deletion/account-deletion.component.html` (English at `/account-deletion`) and `client/src/app/features/account-deletion/it/account-deletion-it.component.html` (Italian at `/account-deletion/it`).
 
-This page exists primarily to satisfy Google Play's Data Safety form requirement that an app supporting account creation expose a publicly reachable URL describing the account-deletion process. The Play Store reviewer visits the URL during policy review.
+The page was first written for Google Play's Data Safety form, which asks an app that supports account creation for a public URL describing account deletion. Since the hosted stack was shut down (#1230) it describes how to remove the data from where it actually lives (#1255).
 
-## 1. Scope
+## 1. There is no Budojo account to close
 
-Budojo is a martial-arts academy management web application — registration, athlete roster, attendance, documents, payments, community feed. Operator (registered owner) accounts are the subject of this page; athlete-side accounts that join via an athlete invite follow the same rules.
+Budojo is a Windows and Android app that runs on the academy's own devices. No account lives on a Budojo server, and Budojo receives none of the data. So deleting means deleting the data where it is: on the PC, on the phone, and in the academy's Google account if it was connected.
 
-## 2. How to request deletion
+What the code still holds, and why it does not apply: the hosted 30-day flow (`POST /api/v1/me/deletion-request` → `RequestAccountDeletionAction`, then `PurgeAccountAction` from `budojo:purge-expired-pending-deletions`) is still in the server and still scheduled, but no screen in the client calls it. The page therefore offers no in-app deletion and no grace window.
 
-### Today — by email
+## 2. Before you delete
 
-Write to **privacy@budojo.it** from the email address you registered with. Subject line "Account deletion". Include your registered name so we can match the request to a single account.
+- If there is any chance you will want the data back, take a backup first (**Data & backup → Back up now**) and keep it somewhere safe, with your recovery code (#1254).
+- To keep a readable copy, on the PC: **Settings → Account → Download my data** saves a ZIP file with the academy's data and documents (`GET /api/v1/me/export?format=zip`, GDPR Art. 15 and 20).
 
-Budojo confirms receipt within five working days and initiates the request on your behalf. Once the request is recorded, the 30-day grace window starts (§ 5 below).
+## 3. On the PC
 
-### Future — in-app, from the SPA
+1. If Google Drive is connected: in **Data & backup**, choose **Disconnect** under **Google Drive backup**. The copies stop; the backups already on Drive stay until you delete them (§ 5).
+2. Uninstall Budojo from Windows.
+3. Delete the folder `%APPDATA%\Budojo\`. **Uninstalling does not touch it** ([`docs/desktop/architecture.md`](../desktop/architecture.md) § Data layout): it holds the database, the documents, the local backups, the logs and the keys (`secrets.bin`).
+4. Delete the archives in the backup folder, if you chose one (#1320): a USB stick, a network drive, a synced folder. Uninstalling leaves them there; Budojo only ever rotates its own archives in that folder.
 
-A "Delete account" entry will land in the user profile page (`/dashboard/profile`) in a follow-up release. The in-app flow re-authenticates with the current password and goes through the same 30-day grace window as the email path. **This UI is not yet shipped**; the email path above is the canonical request channel today.
+## 4. On the phone
 
-## 3. What is deleted
+Uninstall Budojo. Its data lives only in the app's private storage, excluded from Android's cloud backup and from the transfer to a new phone (`mobile/android/app/src/main/res/xml/data_extraction_rules.xml`), so no copy of it stays on Android's side.
 
-After the grace window elapses, the hourly `budojo:purge-expired-pending-deletions` Artisan command runs `App\Actions\User\PurgeAccountAction`, which executes a hard-delete cascade. The following is permanently removed from the production database and from object storage:
+## 5. In the academy's Google account
 
-**User account**
+Only if the academy connected Google Drive:
 
-- First name, last name, display handle
-- Email address, phone number, postal address (line 1/2, city, postal code, province, country)
-- Date of birth, avatar (uploaded photo)
-- bcrypt password hash, Sanctum API tokens, two-factor secret and recovery codes
-- Active sessions, push notification subscriptions
-- Notification preferences, language preference
-- Login history (IP and user-agent rows)
+- Delete the `Budojo` folder in Google Drive: the backups (#1301) and the sync files (`Budojo/sync/`, `docs/sync/protocol.md`). Then empty Drive's trash.
+- Delete Budojo's hidden app data (`budojo-keys.json` in `appDataFolder`, where the keys are): in Google Drive's settings, under Manage apps.
+- Remove Budojo's access from the Google account's security settings.
 
-**Academy** — if the user is the registered owner
+## 6. What Budojo keeps
 
-- Academy name, logo, address, contact phone, email, URLs
-- Sub-processor consent state, DPA acceptance timestamp
+Nothing. Budojo operates no server and keeps no copy, log or backup of the academy's data. Update checks reach GitHub, which sees the device's IP address and never any academy data.
 
-**Athletes** — every athlete belonging to the deleted user's academy, including any soft-deleted athletes
+## 7. When an athlete asks to be erased
 
-- Anagrafica: first name, last name, date and place of birth, codice fiscale, sex as the document records it, belt and stripe state, federation registration status, guardian contacts
-- Profile photos, every uploaded document (medical certificates, federation cards, ID scans)
-- Attendance history, payment history, belt promotion history
+Athletes exercise their right to erasure (GDPR Art. 17) **with the academy**, the controller, not with Budojo.
 
-**Community feed** — authored by the deleted user
+- Removing an athlete in the app takes them off the roster and deletes their documents' files (`AthleteObserver`). Their record and history (attendance, payments, belts) stay in the database: `DELETE /api/v1/athletes/{id}` is a soft delete ([`docs/entities/athlete.md`](../entities/athlete.md)).
+- Older backups keep the data until they rotate out: about two weeks of the app being open (#1330).
 
-- Posts, comments, RSVPs, reactions
+## 8. Contact
 
-Binary files on disk (academy logos, user avatars, athlete photos, uploaded documents) are wiped in a post-commit step after the database cascade succeeds, so the database state and the file system stay consistent.
-
-## 4. What is retained
-
-After deletion, the following residual data is kept for a strictly limited time:
-
-- **Application logs** — at most 30 days, for fraud and abuse review (rotation is automatic)
-- **CDN access logs** (Cloudflare) — at most 30 days, same purpose
-- **Database backups** — at most 30 days from the deletion (automatic rotation)
-- **Outbound email archives** at the email provider — at most 30 days
-
-None of the above is exposed in the application; none is used to reconstruct an account or contact the deleted user. No personally identifiable data is retained beyond these windows.
-
-> **Planned change** — a future migration will make `athlete_payments.athlete_id` nullable and snapshot the athlete name inline, so payment rows can be anonymised and retained for the 10-year fiscal record-keeping required by Italian tax law. **This is not in production today**; payment rows are currently cascade-deleted along with the athlete. This page will be updated in lock-step with that migration.
-
-## 5. Grace window — 30 days
-
-When the request is made (email today, in-app in a future release), Budojo creates a `pending_deletions` row with `scheduled_for = requested_at + 30 days`. During this window:
-
-- The user can cancel by clicking the link in the deletion confirmation email (token-bound public endpoint, no login required from the click) or by visiting the dashboard, where a banner offers a one-click cancellation.
-- The account stays fully functional — login, dashboard access, and authenticated API calls all still work. The banner is the only visible signal.
-- Re-clicking the delete button while a row is pending is a no-op — the existing scheduled date is not extended. This prevents indefinite deferral.
-
-After `scheduled_for` elapses, the hourly cron runs `PurgeAccountAction`. Once that runs, the deletion is irreversible.
-
-## 6. Export your data before deletion
-
-A complete JSON export of the user's personal data — GDPR Art. 15 right of access and Art. 20 right of portability — is available through the authenticated `GET /api/v1/me/export` endpoint. The dashboard exposes a one-click "Export my data" button that hits this endpoint. Users are advised to run an export before confirming a deletion, because the data is unrecoverable after the grace window elapses.
-
-## 7. Contact
-
-- **Privacy and deletion requests** — privacy@budojo.it
-- **Data controller details** — see the [Privacy Policy](/privacy) (English) or the [Informativa sulla Privacy](/privacy/it) (Italian, legal source of truth)
+- **Questions about the software** — privacy@budojo.it
+- **Who controls the data** — see the [Privacy Policy](/privacy) (English) or the [Informativa sulla Privacy](/privacy/it) (Italian, legal source of truth)
 - **Right to lodge a complaint** with the Italian DPA (Garante per la protezione dei dati personali) — https://www.garanteprivacy.it
 
-## 8. Versioning
+## 9. Versioning
 
-This page is updated whenever the deletion flow changes — new retention window, new in-app UI surface, payment anonymisation migration. The version number and last-updated stamp are rendered at the bottom of the SPA pages.
+This page is updated whenever the way to remove the data changes. The version number and last-updated stamp are rendered at the bottom of the SPA pages.
 
-- Version: 1.0
-- Last updated: 2026-05-13
+- Version: 2.0
+- Last updated: 2026-11-09

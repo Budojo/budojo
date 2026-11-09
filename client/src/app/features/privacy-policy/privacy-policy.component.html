@@ -9,8 +9,8 @@
     <p class="legal-page__eyebrow">Legal</p>
     <h1 class="legal-page__title">Privacy Policy</h1>
     <p class="legal-page__subtitle">
-      Notice pursuant to Article 13 of EU Regulation 2016/679 (GDPR) for users of the Budojo
-      service.
+      Who is responsible for the personal data kept in Budojo, where it lives, and what leaves the
+      device.
     </p>
     <!-- Language toggle (#291). EN is the canonical default; IT lives at
          /privacy/it. Italian remains the legal source of truth for IT
@@ -27,226 +27,208 @@
   <aside class="legal-page__notice" data-cy="privacy-draft-banner">
     <p>
       <strong>Technical draft — under legal review.</strong>
-      The final wording is being reviewed by counsel. The technical facts below (data controller,
-      hosting region, retention windows, sub-processors, legal basis) are accurate and match what
-      the production system actually does. Counsel may revise the wording, not the technical facts.
+      The final wording is being reviewed by counsel. The technical facts below (who controls the
+      data, where it is kept, what leaves the device, which third parties the app contacts) match
+      what the app does today. Counsel may revise the wording, not the technical facts.
     </p>
   </aside>
 
   <section class="legal-page__section">
-    <h2>1. Data controller</h2>
+    <h2>1. Who controls the data</h2>
     <p>
-      <strong>Budojo</strong> — website
-      <a href="https://budojo.it" target="_blank" rel="noopener noreferrer">budojo.it</a>. Email for
-      privacy requests:
+      Each academy that uses Budojo is the <strong>data controller</strong> of its own data and of
+      its athletes' data. It decides what to record, why, on which legal basis and for how long, and
+      it gives its athletes its own privacy notice.
+    </p>
+    <p>
+      Budojo is software that runs on the academy's own devices.
+      <strong
+        >Budojo and its author receive none of that data and are not a processor of it.</strong
+      >
+      This page describes what the software does with the data on those devices, so the academy can
+      describe it in turn.
+    </p>
+    <p>
+      Questions about the software:
       <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>
-      <em>(to be confirmed during legal review)</em>.
-    </p>
-    <p>
-      In many use cases the actual controller of the athletes' data is the academy that uses Budojo
-      as its management software: in that case Budojo acts as a
-      <strong>processor</strong>, under the terms of the DPA between Budojo and the academy. This
-      notice covers instead the processing for which Budojo is the
-      <strong>direct controller</strong>: the registration and management of the relationship with
-      the user who opens the account.
+      (<em>to be confirmed during legal review</em>).
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>2. Categories of data collected</h2>
-    <p>Budojo only collects and processes the data necessary to operate the Service:</p>
+    <h2>2. Where the data lives</h2>
     <ul>
-      <li><strong>Identifying and contact data</strong> — first name, last name, email.</li>
       <li>
-        <strong>Credentials</strong> — bcrypt hash of the password, opaque Sanctum tokens (never
-        plaintext).
-      </li>
-      <li><strong>Academy data</strong> — academy name, address, phone numbers, contact links.</li>
-      <li>
-        <strong>Athlete data</strong> — first name, last name, date of birth, belt, registration
-        status, guardian contacts for minors.
-      </li>
-      <li><strong>Attendance data</strong> — check-in dates of athletes at training sessions.</li>
-      <li>
-        <strong>Uploaded documents</strong> — medical certificates, federation registrations, ID
-        documents.
+        <strong>On the PC</strong> — a Windows app. Everything it stores is in
+        <code>%APPDATA%\Budojo\</code> on that computer: the database, the documents, the backups
+        and the logs.
       </li>
       <li>
-        <strong>Technical metadata</strong> — IP address, user-agent, timestamps, limited to
-        security and diagnostics.
+        <strong>On the phone</strong> — an Android app. Its data is in the app's private storage,
+        excluded from Android's cloud backup and from the transfer to a new phone.
+      </li>
+      <li>
+        <strong>No server is operated by Budojo.</strong> The hosted version of Budojo has been shut
+        down.
       </li>
     </ul>
-    <p>
-      Budojo <strong>does not collect</strong> geolocation data, advertising identifiers, or
-      third-party tracking cookies.
-    </p>
-  </section>
-
-  <section class="legal-page__section">
-    <h2>3. Purposes and legal basis of processing</h2>
-    <div class="legal-page__table-wrapper">
-      <table class="legal-page__table">
-        <thead>
-          <tr>
-            <th>Purpose</th>
-            <th>Legal basis (GDPR Art. 6)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Delivery of the Service requested by the user</td>
-            <td>Performance of a contract (Art. 6(1)(b))</td>
-          </tr>
-          <tr>
-            <td>Management of the contractual relationship, billing, service notifications</td>
-            <td>Performance of a contract (Art. 6(1)(b))</td>
-          </tr>
-          <tr>
-            <td>Tax and accounting obligations</td>
-            <td>Legal obligation (Art. 6(1)(c))</td>
-          </tr>
-          <tr>
-            <td>Infrastructure security, abuse prevention, diagnostic logs</td>
-            <td>Legitimate interest (Art. 6(1)(f))</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <section class="legal-page__section">
-    <h2>4. Retention period</h2>
+    <p>What the app stores, as the academy enters it:</p>
     <ul>
-      <li><strong>Active user account</strong> — for the entire duration of the relationship.</li>
+      <li><strong>The owner's profile</strong> — name, email, photo.</li>
+      <li><strong>The academy</strong> — name, address, contacts, logo, timetable, prices.</li>
       <li>
-        <strong>Account scheduled for deletion</strong> — 30-day grace window during which the user
-        can cancel the request. After this window the account is deleted irreversibly.
+        <strong>Athletes</strong> — name, contacts, date and place of birth, codice fiscale, sex as
+        on the document, address, photo, belt and status.
       </li>
+      <li><strong>Activity</strong> — attendance, payments, belt promotions, lesson notes.</li>
       <li>
-        <strong>Billing and accounting data</strong> — 10 years from the date of issue (obligation
-        under Art. 2220 of the Italian Civil Code).
-      </li>
-      <li><strong>Application logs</strong> — at most 12 months.</li>
-      <li>
-        <strong>Account login history</strong> (timestamp, IP address, user-agent, success /
-        failure) — <strong>90 days</strong>, then automatically deleted. You can review your last 50
-        sign-in attempts from your profile page to spot unfamiliar access.
+        <strong>Documents</strong> — medical certificates, ID cards, insurance and other files.
+        Medical certificates are health data (GDPR Art. 9).
       </li>
     </ul>
   </section>
 
   <section class="legal-page__section">
-    <h2>5. Processing methods and security measures</h2>
-    <p>
-      Data is processed with electronic tools and hosted in
-      <strong>EU datacenters (Frankfurt — DigitalOcean <code>fra1</code>)</strong>. Measures
-      adopted:
-    </p>
+    <h2>3. What leaves the device</h2>
     <ul>
-      <li>Encrypted transmission (TLS 1.2+) for every request.</li>
-      <li>Passwords stored only as bcrypt hashes.</li>
-      <li>Bearer-token authentication (Laravel Sanctum); no session cookies.</li>
-      <li>Administrative SSH access via key-based authentication.</li>
-      <li>Periodic audit of sub-processors.</li>
       <li>
-        An automated database-backup plan
-        <strong
-          >planned to be implemented before any real production customer data is collected</strong
-        >.
+        <strong>Nothing reaches Budojo.</strong> The app sends no telemetry, analytics or crash
+        reports. Its logs stay on the device.
+      </li>
+      <li>
+        <strong>No email and no push.</strong> The app sends no email, and the phone's reminders are
+        scheduled on the phone itself.
+      </li>
+      <li>
+        <strong>Google, only if the academy connects its Google account</strong> — for the backup
+        copy and the sync between PC and phone (§ 4).
+      </li>
+      <li>
+        <strong>A backup folder, only if the owner chooses one</strong> — the PC copies each backup
+        into it: a USB stick, a network drive, or a folder a cloud service syncs. That service is
+        the academy's own choice.
+      </li>
+      <li>
+        <strong>GitHub, for updates</strong> — the PC and the phone ask GitHub whether a new version
+        exists, and the PC downloads it from there. GitHub sees the device's IP address and user
+        agent; no academy data is sent.
+      </li>
+      <li>
+        <strong>Links the owner opens</strong> — a technique's video link or a WhatsApp button opens
+        in the device's browser or app, only when clicked.
       </li>
     </ul>
     <p>
-      Medical certificates, as health data (GDPR Art. 9), are subject to a separate assessment
-      documented in <code>docs/legal/dpia-medical-certificates.md</code>.
+      Who each one is and what it sees:
+      <a routerLink="/sub-processors">Sub-processors and third parties</a>.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>6. Cookies and browser-side storage</h2>
-    <p>Budojo <strong>does not use tracking cookies</strong> nor third-party profiling cookies.</p>
+    <h2>4. Google Drive: backup and sync</h2>
+    <p>
+      Both are optional and use the academy's own Google account, under the academy's own agreement
+      with Google. Google's processing, and where it happens, fall under that agreement.
+    </p>
     <ul>
-      <li><strong>HTTP cookies:</strong> none.</li>
       <li>
-        <strong>localStorage:</strong> four strictly technical keys —
-        <code>auth_token</code> (Sanctum session token, strictly necessary to keep the user
-        authenticated), <code>budojoLang</code> (selected interface language — `en` / `it`),
-        <code>budojoCookieConsent</code> (the user's own consent record for non-essential
-        categories, written by the cookie banner), and <code>documents.showCancelled</code>
-        (UI preference for the documents filter). None identify or profile the user.
+        <strong>Backup.</strong> Each backup the PC takes (every 6 hours while the app is open) is
+        uploaded to a <code>Budojo</code> folder in that Drive, with the scope
+        <code>drive.file</code>: the app sees only the files it created. An archive holds the
+        database, which is mostly plain text, and the documents, which stay encrypted.
       </li>
-      <li><strong>sessionStorage / IndexedDB:</strong> not used directly by the SPA.</li>
-    </ul>
-    <p>
-      The user-facing breakdown of categories, current keys, and how to revise consent lives at
-      <a routerLink="/cookie-policy">Cookie Policy</a>. The full technical audit, with the
-      verification methodology and the record of checks, is documented in
-      <code>docs/legal/cookie-audit.md</code> within our source repository; a written request to
-      <a href="mailto:privacy@budojo.it">privacy@budojo.it</a> will return the current copy.
-    </p>
-  </section>
-
-  <section class="legal-page__section">
-    <h2>7. Recipients of the data — sub-processors</h2>
-    <p>
-      Data may be transmitted to the following parties as sub-processors. The canonical and
-      up-to-date list is published at
-      <a routerLink="/sub-processors">/sub-processors</a> (English-only):
-    </p>
-    <ul>
-      <li><strong>Cloudflare, Inc.</strong> — DNS, edge proxy / CDN, TLS termination.</li>
-      <li><strong>DigitalOcean, LLC</strong> — VM hosting (EU region, Frankfurt).</li>
       <li>
-        <strong>Laravel Forge / Tighten Co.</strong> — provisioning and deployment automation.
+        <strong>Sync between PC and phone.</strong> The two devices exchange their data through the
+        same Drive. Every file is sealed with AES-256-GCM under the academy's sync key.
+      </li>
+      <li>
+        <strong>The keys.</strong> The sync key and the keys that open the documents are kept in the
+        Google account's hidden application data (scope <code>drive.appdata</code>), so the phone
+        can open the gym after signing in with Google.
       </li>
     </ul>
     <p>
-      Any change to this list is announced to the academy with 30 days' prior notice. Data is not
-      transferred or sold to third parties for marketing or profiling purposes.
+      <strong>Whoever controls that Google account can read the gym's data:</strong> the database in
+      the backups is mostly plain text, and once the phone is connected, the keys beside it open
+      everything else, medical certificates included. Keep Google's 2-step verification on.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>8. Transfers outside the EU</h2>
-    <p>
-      Personal data is stored within the EU (DigitalOcean Frankfurt). Cloudflare operates a global
-      edge-node infrastructure: HTTP traffic transits through PoPs geographically close to the user,
-      with transfer guarantees governed by the European Commission's Standard Contractual Clauses
-      (SCC).
-    </p>
-  </section>
-
-  <section class="legal-page__section">
-    <h2>9. Rights of the data subject</h2>
-    <p>You may exercise the rights set out in Articles 15–22 GDPR at any time:</p>
+    <h2>5. Security measures</h2>
     <ul>
       <li>
-        <strong>Right of access</strong> (Art. 15) — export via the "Profile" section (JSON + ZIP
-        with documents).
+        Documents, medical certificates included, are encrypted at rest with the academy's document
+        key.
       </li>
       <li>
-        <strong>Right to rectification</strong> (Art. 16) — edit directly from the "Profile"
-        section.
+        On the PC, the keys, the sign-in token and the Google refresh token are encrypted with the
+        Windows keychain (DPAPI), tied to the Windows user account. The database itself is mostly
+        plain text: access to that Windows account is what protects it.
       </li>
       <li>
-        <strong>Right to erasure</strong> (Art. 17) — "Delete account" button in the "Profile"
-        section; 30-day grace window.
+        On the phone, the keys are sealed by the Android Keystore, and the app asks for the
+        fingerprint when it opens. Reminders show their full text on the lock screen, names and
+        amounts included.
       </li>
       <li>
-        <strong>Right to restriction</strong> (Art. 18) — email
-        <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>.
-      </li>
-      <li><strong>Right to portability</strong> (Art. 20) — the export is in open JSON format.</li>
-      <li>
-        <strong>Right to object</strong> (Art. 21) — email
-        <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>.
+        Backup archives carry no keys. Opening the documents on a new computer needs the recovery
+        code.
       </li>
     </ul>
   </section>
 
   <section class="legal-page__section">
-    <h2>10. Complaint to the supervisory authority</h2>
+    <h2>6. Retention period</h2>
+    <ul>
+      <li>The academy decides how long to keep its data, and deletes it in the app.</li>
+      <li>
+        On the PC, medical certificates that expired more than 24 months ago are deleted
+        automatically.
+      </li>
+      <li>
+        Removing an athlete takes them off the roster and deletes their documents; their record and
+        history stay.
+      </li>
+      <li>
+        Backups hold about two weeks of history: the six newest, then the last one of each of the 14
+        most recent days the app ran. What is deleted in the app stays in older backups, on the PC,
+        in the backup folder and on Drive, until they rotate out.
+      </li>
+      <li>
+        Uninstalling does not delete the data. How to remove it:
+        <a routerLink="/account-deletion">Account deletion</a>.
+      </li>
+    </ul>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>7. Cookies and storage on the device</h2>
     <p>
-      You have the right to file a complaint with the competent supervisory authority: for Italy the
+      Budojo sets <strong>no cookies</strong> and uses no tracking or profiling. The app keeps a few
+      technical values in its own storage on the device: the language, the theme, the sync's
+      bookkeeping and one view preference; on the phone, also the sign-in token. The full list is in
+      the <a routerLink="/cookie-policy">Cookie Policy</a>.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>8. Rights of the data subject</h2>
+    <p>
+      Athletes exercise their GDPR rights (Articles 15–22) <strong>with the academy</strong>, the
+      controller. Budojo holds none of their data and cannot answer for the academy.
+    </p>
+    <p>
+      The app helps the academy answer: it shows and corrects an athlete's record, removes an
+      athlete, and on the PC exports the academy's data with its documents as a ZIP file (Settings →
+      Account → Download my data).
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>9. Complaint to the supervisory authority</h2>
+    <p>
+      Anyone may file a complaint with the competent supervisory authority: for Italy the
       <strong>Garante per la protezione dei dati personali</strong>, at
       <a href="https://www.garanteprivacy.it" target="_blank" rel="noopener noreferrer"
         >garanteprivacy.it</a
@@ -255,10 +237,10 @@
   </section>
 
   <section class="legal-page__section">
-    <h2>11. Changes to this notice</h2>
+    <h2>10. Changes to this page</h2>
     <p>
-      Any material changes will be notified to the user by email at least 30 days before they take
-      effect. The version number and the date of the last change are published below.
+      This page ships with the app: a change arrives with an update, and the version number and date
+      below change with it.
     </p>
   </section>
 

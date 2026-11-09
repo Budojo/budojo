@@ -1,15 +1,21 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 
 import { provideI18nTesting } from '../../../test-utils/i18n-test';
 import { CONSENT_STORAGE_KEY, ConsentService } from '../../core/services/consent.service';
+import { RuntimeProfile, RuntimeService } from '../../core/services/runtime.service';
 import { CookiePolicyComponent } from './cookie-policy.component';
 
 describe('CookiePolicyComponent — canonical English /cookie-policy (#421)', () => {
-  function setup() {
+  function setup(profile: RuntimeProfile = 'web') {
     TestBed.configureTestingModule({
       imports: [CookiePolicyComponent],
-      providers: [provideRouter([]), ...provideI18nTesting()],
+      providers: [
+        provideRouter([]),
+        ...provideI18nTesting(),
+        { provide: RuntimeService, useValue: { profile: signal(profile) } },
+      ],
     });
     const router = TestBed.inject(Router);
     router.navigateByUrl = vi.fn().mockResolvedValue(true) as never;
@@ -29,7 +35,7 @@ describe('CookiePolicyComponent — canonical English /cookie-policy (#421)', ()
     expect(root.querySelector('.legal-page__title')?.textContent?.trim()).toBe('Cookie Policy');
     const stamp = root.querySelector('[data-cy="cookie-version-stamp"]');
     expect(stamp?.textContent ?? '').toMatch(/Version/);
-    expect(stamp?.textContent ?? '').toMatch(/2026-05-05/);
+    expect(stamp?.textContent ?? '').toMatch(/2026-11-09/);
   });
 
   it('language toggle points to the Italian translation at /cookie-policy/it', () => {
@@ -48,6 +54,36 @@ describe('CookiePolicyComponent — canonical English /cookie-policy (#421)', ()
     const subs = root.querySelector('a[routerLink="/sub-processors"]');
     expect(privacy).toBeTruthy();
     expect(subs).toBeTruthy();
+  });
+
+  it('lists what the local app stores, and no cookie (#1255)', () => {
+    const { fixture } = setup('desktop');
+    const root: HTMLElement = fixture.nativeElement;
+    const keys = [...root.querySelectorAll('[data-cy="cookie-storage-keys"] tbody tr code')].map(
+      (code) => code.textContent,
+    );
+    // The inventory of docs/legal/cookie-audit.md, key for key. A new
+    // storage key in the app must land here and in the audit together.
+    expect(keys).toEqual([
+      'budojoLang',
+      'budojoTheme',
+      'budojoSyncLedger',
+      'budojoSyncNamed',
+      'documents.showCancelled',
+      'auth_token',
+      'budojoRestoredBackup',
+      'budojo.reminders.told',
+      'budojo-stale-chunk-reload-attempted',
+    ]);
+  });
+
+  it('hides the consent section on the desktop, where no banner is mounted (#1508)', () => {
+    // The banner renders on the web profile only (app.html). A button
+    // that reopens it would do nothing on the desktop or the phone.
+    const { fixture } = setup('desktop');
+    const root: HTMLElement = fixture.nativeElement;
+    expect(root.querySelector('[data-cy="cookie-policy-web-consent"]')).toBeNull();
+    expect(root.querySelector('[data-cy="cookie-policy-manage"]')).toBeNull();
   });
 
   it('manage-preferences link reopens the banner via the consent service', () => {
