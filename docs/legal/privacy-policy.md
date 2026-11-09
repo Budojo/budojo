@@ -68,7 +68,7 @@ Sono entrambi facoltativi e usano l'account Google della palestra, secondo l'acc
 | Dati della palestra e degli atleti | Li decide la palestra, che li cancella dall'app |
 | Certificati medici scaduti | Cancellati in automatico sul PC 24 mesi dopo la scadenza (`budojo:purge-expired-medical-certificates`, #537) |
 | Atleta rimosso | Tolto dall'elenco, documenti cancellati; scheda e storico restano (soft delete, [`docs/entities/athlete.md`](../entities/athlete.md)) |
-| Backup | Circa due settimane: i sei più recenti, poi l'ultimo di ciascuno dei 14 giorni più recenti in cui l'app è stata aperta; la stessa regola nella cartella dei backup e su Drive (#1330). Quello che si cancella nell'app resta nei backup più vecchi finché non ruotano via |
+| Backup | Circa due settimane: i sei più recenti, poi l'ultimo di ciascuno dei 14 giorni più recenti in cui l'app è stata aperta; la stessa regola nella cartella dei backup e su Drive (#1330). Quello che si cancella nell'app resta nei backup più vecchi finché non ruotano via. Fa eccezione `Budojo/sync/` su Drive: tiene la prima versione della palestra, una copia completa con i documenti, finché il titolare non cancella la cartella (`retention.ts` non elimina mai una versione senza genitore) |
 | Dopo la disinstallazione | I dati restano: disinstallare non tocca `%APPDATA%\Budojo\`. Come rimuoverli: [`account-deletion.md`](./account-deletion.md) |
 
 ## 7. Cookie e dati salvati sul dispositivo

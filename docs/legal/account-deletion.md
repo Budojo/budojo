@@ -44,6 +44,7 @@ Athletes exercise their right to erasure (GDPR Art. 17) **with the academy**, th
 
 - Removing an athlete in the app takes them off the roster and deletes their documents' files (`AthleteObserver`). Their record and history (attendance, payments, belts) stay in the database: `DELETE /api/v1/athletes/{id}` is a soft delete ([`docs/entities/athlete.md`](../entities/athlete.md)).
 - Older backups keep the data until they rotate out: about two weeks of the app being open (#1330).
+- With the phone sync on, `Budojo/sync/versions/` on Drive also keeps the academy's first version, a full copy of the database, and the documents it points to, until the owner deletes the folder: retention never prunes a version with no parent (`client/src/app/core/sync/retention.ts`).
 
 ## 8. Contact
 
