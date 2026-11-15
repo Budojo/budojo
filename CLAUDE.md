@@ -117,15 +117,8 @@ Full checklist + labels + body conventions in [`docs/development/pr-labels.md`](
 
 ### Review
 
-The automated post-push reviewer was retired in #1234 — it cost a paid API key per PR and this is a single-developer project. What replaces it runs on the owner's plan:
+When to run `/review-pr` is under the pre-push checklist above; how its `pr-reviewer` agent works, and when it runs on Opus, is in [`.claude/commands/review-pr.md`](./.claude/commands/review-pr.md).
 
-- **[`/review-pr <N>`](./.claude/commands/review-pr.md): the one required review**, run when the PR opens and after every fix round (#2015, #2020). The [`pr-reviewer`](./.claude/agents/pr-reviewer.md) agent:
-  - checks the PR against the issue it closes and the canon for what it touches;
-  - posts its verified findings as inline review threads;
-  - on the next round, resolves the ones the new commits fix.
-
-  Sonnet by default; `--deep` (Opus) for an engine, money, security or migration diff.
-- **`/prereview`** is optional: a pre-push read of a large diff, reported in the session only.
 - Merge once CI is green **and every review thread is resolved**. The `develop` and `main` rulesets require it: a PR with every check green and one open thread reads `BLOCKED`. Read the threads — they have been real — fix or answer, then resolve.
 - **Copilot does not review Budojo's PRs** (#2189, Nov 2026): don't request it and don't wait for it.
 - The PR body still matters: it is the record of why a change looks the way it does.
@@ -137,11 +130,7 @@ The automated post-push reviewer was retired in #1234 — it cost a paid API key
 **Run [`/release`](./.claude/commands/release.md)** — it walks the whole sequence (version → changelog + whats-new → Auto-closes → merge commit → verify installers → sweep) with the traps annotated. Full mechanics in [`docs/development/release-flow.md`](./docs/development/release-flow.md). Key rules:
 
 - **semantic-release owns versioning entirely.** Do NOT create a `version` field in `package.json`.
-- Every squash merge to `develop` → beta tag `vX.Y.Z-beta.N`.
-- Every merge commit `develop → main` → stable tag `vX.Y.Z`.
-- Version bumps follow Angular preset: `feat:` → minor, `fix:` → patch, `BREAKING CHANGE:` → major. **Compute the version BEFORE writing the user-facing changelog** — scan `main..develop` commits first so the whats-new file + Release entry match what semantic-release will tag.
 - **`## Auto-closes` block is mandatory** on every `develop → main` release PR. Without it, leaf issues stay open after merge (GitHub auto-close only fires on the default branch).
-- **Every release ships the user-facing changelog** in the same commit history: `docs/changelog/user-facing/vX.Y.Z.md` + prepend to the `RELEASES` array in `client/src/app/features/whats-new/whats-new.releases.ts`.
 - **Post-release `main → develop` sweep is mandatory** — otherwise develop's next beta tag stays on the old train.
 - **Post-release tech-debt + docs sweep is mandatory** — see [release-flow.md § post-release sweep](./docs/development/release-flow.md#post-release-tech-debt--docscode-cleanup-sweep). Empty findings IS a valid outcome.
 
