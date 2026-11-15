@@ -9,8 +9,7 @@
     <p class="legal-page__eyebrow">Legale</p>
     <h1 class="legal-page__title">Cancellazione dell'account</h1>
     <p class="legal-page__subtitle">
-      Come richiedere la cancellazione definitiva del tuo account Budojo e dei dati che ti
-      riguardano, cosa viene eliminato e cosa viene trattenuto.
+      Come rimuovere Budojo e i dati della palestra dai tuoi dispositivi e dal tuo account Google.
     </p>
     <!-- Language toggle (#688). L'italiano è il source of truth legale
          per i clienti italiani e per il Garante; l'inglese è canonico
@@ -25,144 +24,113 @@
   </header>
 
   <section class="legal-page__section">
-    <h2>1. Cos'è Budojo</h2>
+    <h2>1. Non c'è un account Budojo da chiudere</h2>
     <p>
-      <strong>Budojo</strong> — sito web
-      <a href="https://budojo.it" target="_blank" rel="noopener noreferrer">budojo.it</a> — è
-      un'applicazione web che aiuta le palestre di arti marziali a gestire iscritti, presenze,
-      documenti, pagamenti e community. Questa pagina descrive come richiedere la cancellazione
-      definitiva del tuo account Budojo e dei dati personali associati, ai sensi dell'art. 17 del
-      Regolamento UE 2016/679 (GDPR).
+      <strong>Budojo</strong> è un'app per Windows e Android che gira sui dispositivi della
+      palestra. Nessun account sta su un server di Budojo, e Budojo non riceve nessuno dei dati.
+      Quindi cancellare significa cancellare i dati dove sono: sul PC, sul telefono, e nell'account
+      Google della palestra se è stato collegato.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>2. Come richiedere la cancellazione</h2>
-    <h3>Oggi — via email</h3>
-    <p>
-      Scrivi a
-      <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>
-      dall'indirizzo email che hai usato in fase di registrazione. Oggetto "Cancellazione account".
-      Includi il nome con cui sei registrato così possiamo identificare un unico account.
-      Confermiamo la ricezione entro cinque giorni lavorativi e avviamo la cancellazione per tuo
-      conto. La finestra di grazia di 30 giorni (vedi § 5) decorre dalla conferma.
-    </p>
-    <h3>In arrivo — dall'app</h3>
-    <p>
-      Una voce "Cancella account" verrà aggiunta alla
-      <a routerLink="/dashboard/profile">pagina del tuo profilo</a>
-      in una release successiva. Il flusso in-app richiede la re-autenticazione con la password
-      attuale e segue la stessa finestra di grazia di 30 giorni.
-      <strong>Questa UI non è ancora disponibile</strong>; oggi il canale di richiesta canonico è
-      l'email indicata sopra.
-    </p>
-  </section>
-
-  <section class="legal-page__section">
-    <h2>3. Cosa viene eliminato</h2>
-    <p>
-      Trascorsa la finestra di grazia, un job orario in background esegue una cascade di
-      hard-delete. I seguenti dati sono rimossi in modo permanente dal database e dallo storage:
-    </p>
+    <h2>2. Prima di cancellare</h2>
     <ul>
       <li>
-        <strong>Account utente</strong> — nome, cognome, handle pubblico, email, telefono, indirizzo
-        postale, data di nascita, foto avatar, hash della password, token API, secret e codici di
-        recovery del 2FA, sessioni attive, push subscriptions, preferenze di notifica e lingua, log
-        degli accessi.
+        Se pensi di poterci ripensare, fai prima un backup («Dati e backup → Esegui backup») e
+        mettilo al sicuro, insieme al codice di recupero.
       </li>
       <li>
-        <strong>Accademia</strong> — se sei il proprietario registrato: nome della palestra, logo,
-        indirizzo, telefono, email e URL di contatto.
-      </li>
-      <li>
-        <strong>Atleti</strong> — tutti gli atleti della tua accademia, inclusi quelli
-        precedentemente archiviati: anagrafica, foto profilo, ogni documento caricato (certificati
-        medici, tesseramenti, documenti d'identità), storico presenze, storico pagamenti, storico
-        promozioni cinture.
-      </li>
-      <li>
-        <strong>Community</strong> — post, commenti, RSVP e reazioni pubblicate dal tuo account.
+        Per tenere una copia leggibile, sul PC: «Impostazioni → Account → Scarica i miei dati» salva
+        un file ZIP con i dati e i documenti della palestra.
       </li>
     </ul>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>3. Sul PC</h2>
+    <ol>
+      <li>
+        Se Google Drive è collegato: in «Dati e backup», scegli <strong>Scollega</strong> sotto
+        «Backup su Google Drive». Le copie si fermano; i backup già su Drive restano finché non li
+        cancelli (§ 5).
+      </li>
+      <li>Disinstalla Budojo da Windows.</li>
+      <li>
+        Cancella la cartella <code>%APPDATA%\Budojo\</code>.
+        <strong>Disinstallare non la tocca:</strong> contiene il database, i documenti, i backup
+        locali, i log e le chiavi.
+      </li>
+      <li>
+        Cancella gli archivi nella cartella dei backup, se ne hai scelta una: una chiavetta USB, un
+        disco di rete, una cartella sincronizzata. Disinstallare li lascia lì.
+      </li>
+    </ol>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>4. Sul telefono</h2>
     <p>
-      I file binari su disco (loghi, avatar, foto atleti, documenti) vengono eliminati dopo il
-      commit della cascade DB, in modo che lo stato del database e quello del file system restino
-      coerenti.
+      Disinstalla Budojo. I suoi dati stanno solo nella memoria privata dell'app, esclusi dal backup
+      cloud di Android e dal trasferimento su un telefono nuovo, quindi dalla parte di Android non
+      ne resta nessuna copia.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>4. Cosa viene trattenuto</h2>
-    <p>I seguenti dati residui sono conservati per un periodo strettamente limitato:</p>
+    <h2>5. Nell'account Google della palestra</h2>
+    <p>Solo se la palestra ha collegato Google Drive:</p>
     <ul>
       <li>
-        <strong>Log applicativi</strong> — massimo 30 giorni, per finalità di sicurezza e
-        anti-frode.
-      </li>
-      <li><strong>Log della CDN</strong> (Cloudflare) — massimo 30 giorni, stessa finalità.</li>
-      <li>
-        <strong>Backup del database</strong> — massimo 30 giorni dalla cancellazione, in rotazione
-        automatica.
+        Cancella la cartella <code>Budojo</code> su Google Drive: i backup e i file della
+        sincronizzazione. Poi svuota il cestino di Drive.
       </li>
       <li>
-        <strong>Archivi email in uscita</strong> presso il provider email — massimo 30 giorni.
+        Cancella i dati nascosti dell'app Budojo, dove stanno le chiavi: nelle impostazioni di
+        Google Drive, alla voce «Gestisci app».
+      </li>
+      <li>Togli a Budojo l'accesso dalle impostazioni di sicurezza dell'account Google.</li>
+    </ul>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>6. Cosa tiene Budojo</h2>
+    <p>
+      Niente. Budojo non gestisce nessun server e non tiene copie, log o backup dei dati della
+      palestra. Il controllo degli aggiornamenti raggiunge GitHub, che vede l'indirizzo IP del
+      dispositivo e mai un dato della palestra.
+    </p>
+  </section>
+
+  <section class="legal-page__section">
+    <h2>7. Quando un atleta chiede la cancellazione</h2>
+    <p>
+      Gli atleti esercitano il diritto alla cancellazione (art. 17 GDPR)
+      <strong>presso la palestra</strong>, che è il titolare, non presso Budojo.
+    </p>
+    <ul>
+      <li>
+        Rimuovere un atleta nell'app lo toglie dall'elenco e ne cancella i documenti. La sua scheda
+        e il suo storico (presenze, pagamenti, cinture) restano nel database.
+      </li>
+      <li>
+        I backup più vecchi tengono i dati finché non ruotano via: circa due settimane di app
+        aperta. Con la sincronizzazione del telefono attiva, la cartella <code>Budojo/sync</code>
+        su Drive tiene anche la prima versione della palestra, una copia completa del database con i
+        suoi documenti, finché il titolare non cancella quella cartella.
       </li>
     </ul>
-    <p>
-      Nessuno dei dati sopra è esposto nell'applicazione; nessuno è usato per ricostruire un account
-      o per contattarti dopo la cancellazione. Nessun dato personale identificabile viene trattenuto
-      oltre questi termini.
-    </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>5. Finestra di grazia — 30 giorni</h2>
-    <p>
-      Quando effettui la richiesta, Budojo registra la data e programma la cancellazione effettiva
-      30 giorni dopo. Durante questa finestra:
-    </p>
+    <h2>8. Contatti</h2>
     <ul>
       <li>
-        Puoi annullare la cancellazione in qualsiasi momento cliccando il link presente nell'email
-        di conferma (link pubblico token-bound, non serve essere loggati) oppure dalla tua
-        dashboard, dove un banner offre l'annullamento con un click.
-      </li>
-      <li>
-        Il tuo account resta pienamente funzionante — login, accesso alla dashboard e chiamate API
-        autenticate continuano a funzionare. Il banner è l'unico segnale visibile.
-      </li>
-      <li>
-        Premere di nuovo il pulsante di cancellazione mentre una richiesta è già in attesa è una
-        no-op — la data programmata non viene estesa.
-      </li>
-    </ul>
-    <p>
-      Trascorsi i 30 giorni, un job orario in background esegue la cascade. Una volta avvenuta, la
-      cancellazione è irreversibile.
-    </p>
-  </section>
-
-  <section class="legal-page__section">
-    <h2>6. Esporta i tuoi dati prima della cancellazione</h2>
-    <p>
-      Budojo espone un export JSON one-click dei tuoi dati personali tramite l'endpoint autenticato
-      <code>GET /api/v1/me/export</code>. La dashboard mostra questa funzione come pulsante "Esporta
-      i miei dati" — esercizio del diritto di accesso (art. 15 GDPR) e di portabilità (art. 20
-      GDPR). Consigliamo di scaricare un export prima di confermare la cancellazione, perché i dati
-      sono irrecuperabili una volta scaduta la finestra di grazia.
-    </p>
-  </section>
-
-  <section class="legal-page__section">
-    <h2>7. Contatti</h2>
-    <ul>
-      <li>
-        <strong>Privacy e richieste di cancellazione</strong> —
+        <strong>Domande sul software</strong> —
         <a href="mailto:privacy@budojo.it">privacy@budojo.it</a>
       </li>
       <li>
-        <strong>Dati del titolare del trattamento</strong> — vedi
+        <strong>Chi è titolare dei dati</strong> — vedi
         <a routerLink="/privacy/it">l'Informativa sulla Privacy</a>
         (italiano, source of truth legale) o la
         <a routerLink="/privacy">Privacy Policy</a>

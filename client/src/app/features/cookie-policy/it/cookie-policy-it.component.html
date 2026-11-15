@@ -9,8 +9,8 @@
     <p class="legal-page__eyebrow">Legale</p>
     <h1 class="legal-page__title">Cookie Policy</h1>
     <p class="legal-page__subtitle">
-      Cosa Budojo memorizza sul tuo dispositivo, perché, e come cambiare idea. In linea con le linee
-      guida del Garante del 10 giugno 2021 e con l'art. 5.3 della Direttiva ePrivacy.
+      Cosa Budojo salva sul tuo dispositivo, e perché. In linea con le linee guida del Garante del
+      10 giugno 2021 e con l'art. 5.3 della Direttiva ePrivacy.
     </p>
     <p class="legal-page__lang" data-cy="cookie-lang-toggle">
       <strong aria-current="true">Italiano</strong>
@@ -22,151 +22,157 @@
   <section class="legal-page__section">
     <h2>1. In breve</h2>
     <p>
-      Budojo <strong>non</strong> usa cookie di tracciamento, cookie di profilazione né tag
-      pubblicitari di terze parti. Gli unici artefatti che la SPA salva nel tuo browser sono
-      <em>strettamente necessari</em> al funzionamento — per tenerti autenticato, ricordare un paio
-      di preferenze d'interfaccia, e cachare lo shell della web app per il funzionamento offline.
+      Budojo <strong>non imposta cookie</strong> e non usa tag di tracciamento, di profilazione né
+      pubblicitari. L'app tiene alcuni valori nella propria memoria sul dispositivo. Ciascuno serve
+      al funzionamento dell'app o ricorda una scelta che hai fatto, e nessuno esce dal dispositivo.
     </p>
     <p>
-      Mostriamo comunque un banner di consenso perché nel momento in cui aggiungeremo qualcosa di
-      non essenziale — analytics, un video embed, un pixel marketing — la legge richiede di chiedere
-      prima. Il banner è il gate; le categorie qui sotto sono cosa il gate copre.
+      Le app per Windows e per Android non mostrano un banner di consenso: niente di quello che
+      salvano è facoltativo.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>2. Categorie</h2>
+    <h2>2. Cosa salva l'app</h2>
     <p>
-      Il banner di consenso raggruppa cookie e archiviazione lato browser in quattro categorie. Solo
-      la prima è bloccata; le altre tre sono opt-in.
-    </p>
-    <ul>
-      <li>
-        <strong>Essenziali.</strong> Strettamente necessari per erogare il servizio richiesto —
-        autenticazione, cache dello shell della web app, preferenza di lingua. Sempre attive.
-      </li>
-      <li>
-        <strong>Preferenze.</strong> Memorizza piccole scelte d'interfaccia che personalizzano
-        l'esperienza ma non sono richieste per il servizio — ad es. il toggle che mostra i documenti
-        cancellati nel dettaglio atleta.
-      </li>
-      <li>
-        <strong>Analytics.</strong> Telemetria d'uso anonima che potremmo aggiungere in futuro per
-        capire quali funzioni vengono usate. Oggi non è collegata.
-      </li>
-      <li>
-        <strong>Marketing.</strong> Pixel di terze parti per retargeting o conversion tracking. Oggi
-        nessuno e nessun piano nella roadmap immediata; la categoria esiste come gate per consentire
-        l'aggiunta pulita di uno strumento futuro.
-      </li>
-    </ul>
-  </section>
-
-  <section class="legal-page__section">
-    <h2>3. Cosa salviamo davvero oggi</h2>
-    <p>
-      Replicato da <code>docs/legal/cookie-audit.md</code> — l'inventario auditabile nel nostro
-      repository. I due artefatti sono mantenuti allineati a mano; il markdown è la fonte canonica.
+      Replicato da <code>docs/legal/cookie-audit.md</code>, l'inventario auditabile nel nostro
+      repository. I due sono mantenuti allineati a mano; il markdown è la fonte canonica.
     </p>
 
     <div class="legal-page__table-wrapper">
-      <table class="legal-page__table">
+      <table class="legal-page__table" data-cy="cookie-storage-keys">
         <thead>
           <tr>
             <th>Chiave</th>
             <th>Dove</th>
             <th>Finalità</th>
-            <th>Categoria</th>
+            <th>Dispositivo</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td><code>auth_token</code></td>
-            <td>localStorage</td>
-            <td>Token bearer Sanctum per restare autenticato dopo un refresh.</td>
-            <td>Essenziali</td>
-          </tr>
-          <tr>
             <td><code>budojoLang</code></td>
             <td>localStorage</td>
-            <td>La lingua selezionata (Italiano / English).</td>
-            <td>Essenziali</td>
+            <td>La tua lingua (italiano o inglese).</td>
+            <td>PC e telefono</td>
           </tr>
           <tr>
-            <td><code>budojoCookieConsent</code></td>
+            <td><code>budojoTheme</code></td>
             <td>localStorage</td>
-            <td>La scelta che fai sul banner di consenso.</td>
-            <td>Essenziali</td>
+            <td>Il tuo tema: chiaro, scuro o quello del sistema.</td>
+            <td>PC e telefono</td>
+          </tr>
+          <tr>
+            <td><code>budojoSyncLedger</code></td>
+            <td>localStorage</td>
+            <td>
+              Dati di servizio della sincronizzazione: l'ultima versione sincronizzata da questo
+              dispositivo, per dispositivo e cartella. Solo con la sincronizzazione attiva.
+            </td>
+            <td>PC e telefono</td>
+          </tr>
+          <tr>
+            <td><code>budojoSyncNamed</code></td>
+            <td>localStorage</td>
+            <td>
+              Dati di servizio della sincronizzazione: quali file usa ogni versione tenuta, per hash
+              del contenuto. Solo con la sincronizzazione attiva.
+            </td>
+            <td>PC e telefono</td>
           </tr>
           <tr>
             <td><code>documents.showCancelled</code></td>
             <td>localStorage</td>
-            <td>Toggle che ricorda se mostrare i documenti cancellati nel dettaglio atleta.</td>
-            <td>Preferenze</td>
+            <td>Se l'elenco documenti di un atleta mostra i documenti cancellati.</td>
+            <td>PC e telefono</td>
           </tr>
           <tr>
-            <td><em>Cache del service worker</em></td>
-            <td>Cache Storage</td>
-            <td>Cache di JS / CSS / icone della PWA installata.</td>
-            <td>Essenziali</td>
+            <td><code>auth_token</code></td>
+            <td>localStorage</td>
+            <td>Il token di accesso, tenuto nella memoria privata dell'app.</td>
+            <td>Telefono</td>
+          </tr>
+          <tr>
+            <td><code>budojoRestoredBackup</code></td>
+            <td>localStorage</td>
+            <td>
+              Il backup da cui il telefono è stato ripristinato l'ultima volta, così un nuovo
+              accesso entra subito.
+            </td>
+            <td>Telefono</td>
+          </tr>
+          <tr>
+            <td><code>budojo.reminders.told</code></td>
+            <td>localStorage</td>
+            <td>Quali promemoria sono già stati mostrati, così nessuno compare due volte.</td>
+            <td>Telefono</td>
+          </tr>
+          <tr>
+            <td><code>budojo-stale-chunk-reload-attempted</code></td>
+            <td>sessionStorage</td>
+            <td>
+              Impostato solo se l'app deve ricaricarsi da sola dopo un aggiornamento, perché non lo
+              faccia all'infinito. Rimosso dopo 30 secondi di funzionamento normale.
+            </td>
+            <td>PC e telefono</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <p>
-      Non impostiamo cookie HTTP. L'autenticazione usa un token bearer (Sanctum) trasportato
-      nell'header <code>Authorization</code> — non c'è nessun cookie di sessione.
+      Sul PC il token di accesso non sta in questa memoria: lo tiene il processo principale
+      dell'app, cifrato con il portachiavi di Windows. L'app non imposta cookie HTTP, e non usa
+      IndexedDB né la cache di un service worker.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>4. Terze parti</h2>
+    <h2>3. Terze parti</h2>
     <p>
-      L'elenco corrente dei sub-processor è su
-      <a routerLink="/sub-processors">/sub-processors</a>. Nessuno di loro setta un cookie nel tuo
-      browser sull'origine di Budojo: Cloudflare opera come proxy trasparente senza cookie di bot,
-      DigitalOcean vede solo traffico server-side, e Laravel Forge esegue deploy non richieste.
-      Qualsiasi modifica a questo contratto si traduce in un aggiornamento di questa pagina nello
-      stesso rilascio.
+      Le terze parti che l'app contatta sono elencate su
+      <a routerLink="/sub-processors/it">/sub-processors/it</a>. I link che il titolare apre (il
+      video di una tecnica, WhatsApp) si aprono nel browser o nell'app del dispositivo: i cookie che
+      quei siti impostano stanno lì, secondo le loro regole, non in Budojo.
     </p>
   </section>
 
-  <section class="legal-page__section">
-    <h2>5. Cambia idea</h2>
-    <p>Puoi riaprire il banner di consenso in qualsiasi momento e modificare le tue scelte.</p>
-    <p>
-      <button
-        type="button"
-        class="legal-page__inline-button"
-        (click)="managePreferences()"
-        data-cy="cookie-policy-manage"
-      >
-        Gestisci le tue preferenze
-      </button>
-      — oppure cancella <code>budojoCookieConsent</code> dai dati del sito nel browser e il banner
-      si ripresenterà alla prossima visita.
-    </p>
-  </section>
+  <!-- Solo dove il banner di consenso è montato (#1508): il profilo web.
+       Sul desktop e sul telefono il banner non compare mai, quindi un
+       pulsante che lo riapre non farebbe niente. -->
+  @if (runtime.profile() === 'web') {
+    <section class="legal-page__section" data-cy="cookie-policy-web-consent">
+      <h2>4. Nel browser</h2>
+      <p>
+        La versione web di Budojo tiene in questa memoria anche il token di accesso
+        (<code>auth_token</code>) e la tua scelta sul consenso (<code>budojoCookieConsent</code>), e
+        mostra un banner di consenso per categorie facoltative, nessuna delle quali è in uso.
+      </p>
+      <p>
+        <button
+          type="button"
+          class="legal-page__inline-button"
+          (click)="managePreferences()"
+          data-cy="cookie-policy-manage"
+        >
+          Gestisci le tue preferenze
+        </button>
+        — oppure cancella <code>budojoCookieConsent</code> dai dati del sito nel browser e il banner
+        si ripresenterà alla prossima visita.
+      </p>
+    </section>
+  }
 
   <section class="legal-page__section">
-    <h2>6. Re-consenso al cambio di policy</h2>
-    <p>
-      Il payload di consenso porta un numero di versione. Quando aggiungiamo una nuova categoria o
-      cambiamo in modo sostanziale il significato di una esistente, alziamo la versione e il banner
-      si ripresenta perché tu possa rinnovare la scelta. La decisione precedente non viene ereditata
-      silenziosamente.
-    </p>
-  </section>
-
-  <section class="legal-page__section">
-    <h2>7. Correlate</h2>
+    <h2>Correlate</h2>
     <ul>
       <li>
-        <a routerLink="/privacy/it">Informativa sulla privacy</a> — quali dati personali trattiamo e
-        perché.
+        <a routerLink="/privacy/it">Informativa sulla privacy</a> — chi è titolare dei dati e cosa
+        esce dal dispositivo.
       </li>
-      <li><a routerLink="/sub-processors">Sub-processor</a> — ogni terza parte nella catena.</li>
+      <li>
+        <a routerLink="/sub-processors/it">Sub-processor</a> — le terze parti che l'app contatta.
+      </li>
     </ul>
   </section>
 

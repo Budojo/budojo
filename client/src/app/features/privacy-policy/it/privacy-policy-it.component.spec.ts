@@ -36,7 +36,7 @@ describe('PrivacyPolicyItComponent — Italian /privacy/it (#291)', () => {
     const stamp = root.querySelector('[data-cy="privacy-version-stamp"]');
     expect(stamp).toBeTruthy();
     expect(stamp?.textContent ?? '').toMatch(/Versione/);
-    expect(stamp?.textContent ?? '').toMatch(/2026-04-30/);
+    expect(stamp?.textContent ?? '').toMatch(/2026-11-09/);
   });
 
   it('language toggle points to the canonical English /privacy', () => {
@@ -55,17 +55,26 @@ describe('PrivacyPolicyItComponent — Italian /privacy/it (#291)', () => {
     expect(activeMarker?.textContent?.trim()).toBe('Italiano');
   });
 
-  it('links to the canonical sub-processor list and the cookie audit', () => {
+  it('links to the Italian sub-processor, cookie and deletion pages', () => {
     const { fixture } = setup();
     const root: HTMLElement = fixture.nativeElement;
 
-    const subprocessorLink = root.querySelector(
-      'a[routerLink="/sub-processors"], a[href="/sub-processors"]',
-    );
-    expect(subprocessorLink).toBeTruthy();
+    // An Italian reader stays in Italian: every cross-link goes to the
+    // /it twin of the page it names.
+    expect(root.querySelector('a[routerLink="/sub-processors/it"]')).toBeTruthy();
+    expect(root.querySelector('a[routerLink="/cookie-policy/it"]')).toBeTruthy();
+    expect(root.querySelector('a[routerLink="/account-deletion/it"]')).toBeTruthy();
+  });
 
-    const text = root.textContent ?? '';
-    expect(text).toContain('cookie');
+  it('names the academy as the data controller and Budojo as no processor (#1255)', () => {
+    // Whitespace collapsed: the template wraps prose wherever prettier likes.
+    const text = ((setup().fixture.nativeElement as HTMLElement).textContent ?? '').replace(
+      /\s+/g,
+      ' ',
+    );
+
+    expect(text).toContain('titolare del trattamento');
+    expect(text).toContain('non ne sono responsabili del trattamento');
   });
 
   it('CTA navigates back to the root', () => {

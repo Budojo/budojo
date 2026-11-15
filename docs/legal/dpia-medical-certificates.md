@@ -42,7 +42,7 @@ Il trattamento riguarda i **certificati medici sportivi** (idoneità non agonist
 Implementazione attuale (M3 Documents):
 
 - Upload via UI istruttore (`/dashboard/athletes/{id}/documents`).
-- Storage: filesystem privato sull'host applicativo (DigitalOcean droplet, regione `fra1`), via Laravel `Storage::disk('local')` sotto `storage/app/private/documents/`. L'accesso al file è sempre mediato dal backend autenticato; non c'è bucket/object-storage esposto. Vedere `docs/entities/document.md`.
+- Storage: filesystem privato del dispositivo dove gira l'app (sul PC, sotto `%APPDATA%\Budojo\storage\app\private\documents\`), via Laravel `Storage::disk('local')`. Lo stack ospitato su DigitalOcean è stato dismesso in #1230. L'accesso al file è sempre mediato dal backend autenticato; non c'è bucket/object-storage esposto. Vedere `docs/entities/document.md`.
 - Lettura: download autenticato via endpoint `GET /api/v1/documents/{id}/download` con scoping `academy_id`.
 - Scadenze: cron `budojo:send-medical-cert-expiry-reminders` (M5 PR-D) invia un **digest per academy** ai T-30 / T-7 / T-0 giorni dalla scadenza del singolo certificato.
 
@@ -127,7 +127,7 @@ Rischi principali per l'interessato (l'atleta), valutati su scala bassa / media 
 | R2      | Nessun audit log strutturato delle azioni sui documenti — solo log applicativi non-strutturati per errori HTTP. | **Audit log immutabile** delle azioni sensibili: visualizzazione/download certificati, modifica/cancellazione, accesso staff | #429                 |
 | R3      | Scoping `academy_id` in tutte le query del repository documenti; coverage PEST con feature test cross-academy | Estensione della coverage a tutti gli endpoint che restituiscono documenti; test mirati di tentato cross-academy access | M7-pre               |
 | R4      | Storage su droplet (single-host)                                                                     | Backup automatici (vedi sopra)                                                                                              | DPA § 8              |
-| R5      | Sub-processor esclusivamente UE (DigitalOcean Frankfurt + Cloudflare con SCC); lista pubblica         | Nessun cambiamento — già mitigato                                                                                          | sub-processors.md   |
+| R5      | Nessun sub-processor: lo stack ospitato è stato dismesso (#1230); le terze parti che l'app contatta sono in una lista pubblica (#1255) | Nessun cambiamento — già mitigato                                                                                          | sub-processors.md   |
 | R6      | Cancellazione cascata documenti via `AthleteObserver` → `DeleteDocumentAction` quando l'atleta è rimosso. **Implementata in #537**: cron giornaliero `budojo:purge-expired-medical-certificates` (03:15 Europe/Rome) — purga i certificati medici con `expires_at` antecedente a 24 mesi via lo stesso `DeleteDocumentAction` usato dal cascade. | — (mitigazione completata) | #537 (DPIA #227-a) — chiuso |
 | R7      | Endpoint `/me/export` (#222), `/me/deletion-request` (#223); coverage PEST esplicita su `type = medical_certificate` aggiunta in #539 (Art. 15 ZIP include il binario; Art. 17 `PurgeAccountAction` rimuove il file dal disco). **Verificato in v2.3.2.** | Riapertura solo se la decisione A/B § 8 cambia la forma del binario (es. niente più PDF in Budojo). | #538 (DPIA #227-b) — chiuso da #539 |
 

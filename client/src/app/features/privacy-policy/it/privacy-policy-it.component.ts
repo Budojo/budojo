@@ -21,15 +21,12 @@ import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/bran
  *
  * Edits to ANY ONE of the three MUST land in lock-step in the same PR.
  *
- * **Draft status.** Ships with a visible "Bozza tecnica — in
- * revisione legale" banner. Structure and technical facts (sub-
- * processors, retention, hosting region, base giuridica) are accurate
- * today; the formal lawyer-reviewed prose lands separately. Shipping
- * the scaffold + facts NOW is the good-faith Art. 13 disclosure
- * required before launch.
+ * **Draft status.** Ships with a visible "Bozza tecnica — non rivista
+ * da un legale" banner: no legal review is decided (decisioni-aperte
+ * D3). The technical facts (who controls the data, where it lives,
+ * what leaves the device) are accurate today (#1255).
  *
- * Public route (no auth) so a prospect filling the registration form
- * can read the policy before checking the consent box.
+ * Public route (no auth), linked from the sign-up and sign-in screens.
  */
 @Component({
   selector: 'app-privacy-policy-it',
@@ -42,8 +39,8 @@ import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/bran
 export class PrivacyPolicyItComponent {
   private readonly router = inject(Router);
 
-  protected readonly version = '0.1 (bozza)';
-  protected readonly lastUpdated = '2026-04-30';
+  protected readonly version = '0.2 (bozza)';
+  protected readonly lastUpdated = '2026-11-09';
 
   goHome(): void {
     this.router.navigateByUrl('/');

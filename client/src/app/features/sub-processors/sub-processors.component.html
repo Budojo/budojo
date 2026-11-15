@@ -9,7 +9,7 @@
     <p class="legal-page__eyebrow">Legal</p>
     <h1 class="legal-page__title">Sub-processors</h1>
     <p class="legal-page__subtitle">
-      The third parties that process customer data on Budojo's behalf, per GDPR Art. 28.
+      Budojo has none. These are the third parties the app contacts, when, and what each one sees.
     </p>
     <!-- Language toggle (#280). The canonical source for this page is
          the English `docs/legal/sub-processors.md` markdown — unlike
@@ -28,135 +28,107 @@
   </header>
 
   <section class="legal-page__section">
-    <h2>What "sub-processor" means here</h2>
+    <h2>Why Budojo has no sub-processors</h2>
     <p>
-      A <strong>sub-processor</strong> is any third party that, on Budojo's instruction, stores,
-      transmits, or otherwise processes personal data of Budojo academy customers and their athletes
-      — hosting providers, CDNs, mail-delivery vendors, error-tracking services.
+      A <strong>sub-processor</strong> processes personal data for a processor (GDPR Art. 28).
+      Budojo is not a processor of the academy's data: the app runs on the academy's own devices,
+      and Budojo receives none of the data. So Budojo has no sub-processors.
     </p>
     <p>
-      A vendor that touches only Budojo's own corporate data (our source code on GitHub, our
-      internal Slack, etc.) is <em>not</em> a sub-processor under this definition — academy customer
-      data never reaches them.
+      The app still contacts a few third parties. Each is a service of the academy's own, or a
+      public endpoint; none of them works for Budojo.
     </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>Current sub-processors</h2>
+    <h2>Third parties the app contacts</h2>
     <div class="legal-page__table-wrapper">
-      <table class="legal-page__table" data-cy="sub-processors-current">
+      <table class="legal-page__table" data-cy="sub-processors-third-parties">
         <thead>
           <tr>
-            <th>Provider</th>
-            <th>Role</th>
-            <th>Region</th>
-            <th>Personal data touched</th>
-            <th>DPA</th>
+            <th>Who</th>
+            <th>When</th>
+            <th>What it sees</th>
+            <th>Whose relationship</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td><strong>Cloudflare, Inc.</strong></td>
+            <td><strong>Google</strong> (Drive, sign-in)</td>
             <td>
-              DNS, edge proxy / CDN, TLS termination, WAF for <code>budojo.it</code>,
-              <code>www.budojo.it</code>, <code>api.budojo.it</code>. Also hosts the SPA build via
-              Cloudflare Pages.
+              Only if the academy connects its Google account: the PC's backup copy, every 6 hours
+              while the app is open; the sync between PC and phone; signing in on the phone.
             </td>
-            <td>Global edge (EU PoPs preferred + transit)</td>
-            <td>Request metadata (IPs, headers), TLS handshake, SPA bundle. No database access.</td>
             <td>
-              <a
-                href="https://www.cloudflare.com/cloudflare-customer-dpa/"
-                target="_blank"
-                rel="noopener noreferrer"
-                >Cloudflare DPA</a
-              >
+              The backup archives: a database that is mostly plain text, and the encrypted
+              documents. The sync files, sealed under the academy's sync key. The keys, in the
+              account's hidden application data. Scopes <code>drive.file</code> and
+              <code>drive.appdata</code>.
             </td>
+            <td>The academy's own Google account, under the academy's agreement with Google.</td>
           </tr>
           <tr>
-            <td><strong>DigitalOcean, LLC</strong></td>
-            <td>VM (droplet) hosting the Laravel API, MySQL, local document storage.</td>
-            <td>EU (<code>fra1</code>, Frankfurt)</td>
+            <td><strong>GitHub</strong></td>
             <td>
-              All academy and athlete records (DB), uploaded documents (disk), application logs.
+              The PC checks GitHub Releases for a new version and downloads it from there. The phone
+              asks GitHub's API for the latest releases, to show an update notice.
             </td>
-            <td>
-              <a
-                href="https://www.digitalocean.com/legal/data-processing-agreement"
-                target="_blank"
-                rel="noopener noreferrer"
-                >DigitalOcean DPA</a
-              >
-            </td>
+            <td>The device's IP address and user agent. No academy data.</td>
+            <td>The public page where Budojo publishes its releases.</td>
           </tr>
           <tr>
-            <td><strong>Laravel Forge (Tighten Co.)</strong></td>
+            <td><strong>Sites behind the links the owner opens</strong> (YouTube, WhatsApp…)</td>
             <td>
-              Provisioning and deploy automation for the DigitalOcean droplet. Connects via SSH;
-              does not proxy customer traffic.
-            </td>
-            <td>US-managed control plane; the droplet stays in DigitalOcean EU.</td>
-            <td>
-              Server-level metadata (deploy logs, env-var contents the Forge agent needs). No direct
-              customer data.
+              Only when the owner clicks a technique's video link or a WhatsApp button. The link
+              opens in the device's browser or app; the app fetches nothing from these sites by
+              itself.
             </td>
             <td>
-              <a href="https://tighten.com/legal/dpa" target="_blank" rel="noopener noreferrer"
-                >Forge / Tighten DPA</a
-              >
+              What any visit shows them. A WhatsApp link also carries the phone number or the
+              message it opens.
             </td>
+            <td>The owner's own browser and accounts.</td>
           </tr>
         </tbody>
       </table>
     </div>
+    <p>
+      A backup folder the owner chooses is written like any other folder. If a cloud service syncs
+      it, that service is the academy's own choice too.
+    </p>
   </section>
 
   <section class="legal-page__section">
-    <h2>Planned sub-processors (not yet active)</h2>
-    <p>
-      Each addition is preceded by a 30-day customer notification per the change process below. They
-      are NOT active until that window has elapsed.
-    </p>
-    <ul class="legal-page__planned">
-      <li>
-        <strong>Email delivery vendor</strong> (TBD: Postmark / Resend / Mailgun EU) — transactional
-        emails. Activates with M5 notifications. EU vendors preferred to avoid SCC overhead.
-      </li>
-      <li>
-        <strong>Sentry</strong> or comparable — browser and server error tracking with source-mapped
-        stack traces. Activates if we adopt error tracking.
-      </li>
-      <li>
-        <strong>Stripe, Inc.</strong> — payment processing for the Budojo SaaS subscription itself
-        (NOT the academy ↔ athlete payment ledger, which lives in our DB). Activates at
-        monetisation.
-      </li>
+    <h2>What is not there</h2>
+    <ul>
+      <li>No Budojo server, hosting or CDN.</li>
+      <li>No email provider: the app sends no email.</li>
+      <li>No push service: the phone's reminders are local notifications.</li>
+      <li>No analytics, error tracking or crash reporting.</li>
     </ul>
+    <p>
+      Earlier versions of this page listed Cloudflare, DigitalOcean and Laravel Forge. They ran the
+      hosted version of Budojo, which has been shut down.
+    </p>
   </section>
 
   <section class="legal-page__section">
     <h2>Change process</h2>
-    <ol>
-      <li>Sub-processor change is opened as a PR updating this page and the source markdown.</li>
-      <li>
-        Every active academy customer is emailed at least <strong>30 days</strong> before the new
-        vendor goes live, with a link to this page and the activation date.
-      </li>
-      <li>
-        Customers may object in writing within those 30 days. A blocking objection means we drop the
-        change, or we terminate the customer's contract pro-rata.
-      </li>
-      <li>After the 30-day window with no blocking objections, the new vendor goes live.</li>
-    </ol>
+    <p>
+      If a version of the app starts contacting a new third party, this page and its source change
+      in the same release.
+    </p>
   </section>
 
   <section class="legal-page__section">
     <h2>Related documents</h2>
     <ul>
-      <li>DPA template — see your customer dashboard for the signed copy.</li>
       <li>
-        <a routerLink="/privacy" data-cy="sub-processors-privacy-link">Privacy policy</a> — Art. 13
-        informativa for users registering with Budojo.
+        <a routerLink="/privacy" data-cy="sub-processors-privacy-link">Privacy policy</a> — who
+        controls the data and what leaves the device.
+      </li>
+      <li>
+        <a routerLink="/cookie-policy">Cookie policy</a> — what the app keeps in its own storage.
       </li>
     </ul>
   </section>

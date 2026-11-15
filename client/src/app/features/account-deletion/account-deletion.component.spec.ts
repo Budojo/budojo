@@ -30,7 +30,7 @@ describe('AccountDeletionComponent — canonical English /account-deletion (#688
     const stamp = root.querySelector('[data-cy="account-deletion-version-stamp"]');
     expect(stamp).toBeTruthy();
     expect(stamp?.textContent ?? '').toMatch(/Version/);
-    expect(stamp?.textContent ?? '').toMatch(/2026-05-13/);
+    expect(stamp?.textContent ?? '').toMatch(/2026-11-09/);
   });
 
   it('language toggle points to the Italian translation', () => {
@@ -49,7 +49,7 @@ describe('AccountDeletionComponent — canonical English /account-deletion (#688
     expect(activeMarker?.textContent?.trim()).toBe('English');
   });
 
-  it('surfaces the privacy mailbox as the canonical request channel', () => {
+  it('keeps the privacy mailbox for questions about the software', () => {
     const { fixture } = setup();
     const root: HTMLElement = fixture.nativeElement;
 
@@ -57,12 +57,17 @@ describe('AccountDeletionComponent — canonical English /account-deletion (#688
     expect(mailto).toBeTruthy();
   });
 
-  it('states the 30-day grace window for the Play Store reviewer to audit', () => {
+  it('says there is no server account and where the data really is (#1255)', () => {
     const { fixture } = setup();
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    // Whitespace collapsed: the template wraps prose wherever prettier likes.
+    const text = ((fixture.nativeElement as HTMLElement).textContent ?? '').replace(/\s+/g, ' ');
 
-    expect(text).toContain('30');
-    expect(text.toLowerCase()).toContain('grace');
+    // The hosted 30-day deletion flow is gone with the server (#1230).
+    // What replaces it: the data folder, which an uninstall leaves behind.
+    expect(text).toContain('There is no Budojo account to close');
+    expect(text).toContain('%APPDATA%\\Budojo\\');
+    expect(text).toContain('Uninstalling does not touch it');
+    expect(text.toLowerCase()).not.toContain('grace');
   });
 
   it('cross-links to the privacy policy so the chain stays auditable', () => {

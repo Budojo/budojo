@@ -30,23 +30,24 @@ describe('SubProcessorsComponent (#225)', () => {
     return { fixture, cmp: fixture.componentInstance };
   }
 
-  it('renders the header + the three current sub-processors', () => {
+  it('renders the header + the three third parties the app contacts (#1255)', () => {
     const { fixture } = setup();
     const root: HTMLElement = fixture.nativeElement;
 
     expect(root.querySelector('.legal-page__title')?.textContent?.trim()).toBe('Sub-processors');
 
-    // The current-sub-processors table must list the three vendors we
-    // actually use today: Cloudflare, DigitalOcean, Forge. If a row
-    // changes name or disappears, the test fails — forcing the audit
-    // back through the CI gate.
-    const text = root.textContent ?? '';
-    expect(text).toContain('Cloudflare');
-    expect(text).toContain('DigitalOcean');
-    expect(text).toContain('Laravel Forge');
-
-    const rows = root.querySelectorAll('[data-cy="sub-processors-current"] tbody tr');
+    // Budojo has no sub-processors since the hosted stack was shut down
+    // (#1230). The table must list exactly the third parties the local
+    // app contacts: Google, GitHub, and the sites behind the links the
+    // owner opens. If a row changes name or disappears, the test fails,
+    // forcing the audit back through the CI gate.
+    const rows = [
+      ...root.querySelectorAll('[data-cy="sub-processors-third-parties"] tbody tr'),
+    ].map((row) => (row.querySelector('td')?.textContent ?? '').replace(/\s+/g, ' '));
     expect(rows.length).toBe(3);
+    expect(rows[0]).toContain('Google');
+    expect(rows[1]).toContain('GitHub');
+    expect(rows[2]).toContain('links the owner opens');
   });
 
   it('language toggle points to the Italian /sub-processors/it (#280)', () => {

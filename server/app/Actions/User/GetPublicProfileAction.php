@@ -77,7 +77,19 @@ class GetPublicProfileAction
             throw new NotFoundHttpException();
         }
 
-        $promotions = array_values(
+        // array_map, not Collection::map: PHPStan 2.3 widens the generic's
+        // template to `string`, losing `kind`'s 'belt'|'stripe'.
+        $promotions = array_values(array_map(
+            fn (AthletePromotion $p): array => [
+                'id' => $p->id,
+                'kind' => $p->kind,
+                'from_belt' => $p->from_belt?->value,
+                'to_belt' => $p->to_belt?->value,
+                'from_stripes' => $p->from_stripes,
+                'to_stripes' => $p->to_stripes,
+                'belt_at_event' => $p->belt_at_event->value,
+                'recorded_at' => $p->recorded_at->toIso8601String(),
+            ],
             AthletePromotion::query()
                 ->where('athlete_id', $targetAthlete->id)
                 // The public line reads "Promoted from X to Y". A belt row
@@ -89,18 +101,8 @@ class GetPublicProfileAction
                 ->orderByDesc('id')
                 ->limit(50)
                 ->get()
-                ->map(fn (AthletePromotion $p): array => [
-                    'id' => $p->id,
-                    'kind' => $p->kind,
-                    'from_belt' => $p->from_belt?->value,
-                    'to_belt' => $p->to_belt?->value,
-                    'from_stripes' => $p->from_stripes,
-                    'to_stripes' => $p->to_stripes,
-                    'belt_at_event' => $p->belt_at_event->value,
-                    'recorded_at' => $p->recorded_at->toIso8601String(),
-                ])
                 ->all(),
-        );
+        ));
 
         $achievements = array_values(
             Achievement::query()

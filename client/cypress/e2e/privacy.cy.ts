@@ -34,7 +34,7 @@ describe('Privacy policy — canonical English /privacy (#291)', () => {
     cy.get('[data-cy="privacy-version-stamp"]')
       .should('be.visible')
       .and('contain.text', 'Version')
-      .and('contain.text', '2026-04-30');
+      .and('contain.text', '2026-11-09');
   });
 
   it('language toggle links to the Italian translation at /privacy/it', () => {
@@ -54,7 +54,7 @@ describe('Privacy policy — canonical English /privacy (#291)', () => {
   });
 
   it('cross-links to /sub-processors so the chain stays auditable', () => {
-    cy.contains('a[href="/sub-processors"]', '/sub-processors').should('exist');
+    cy.get('a[href="/sub-processors"]').should('exist');
   });
 });
 
@@ -69,7 +69,7 @@ describe('Privacy policy — Italian /privacy/it (#291)', () => {
     cy.get('[data-cy="privacy-version-stamp"]')
       .should('be.visible')
       .and('contain.text', 'Versione')
-      .and('contain.text', '2026-04-30');
+      .and('contain.text', '2026-11-09');
   });
 
   it('language toggle links back to the canonical /privacy', () => {

@@ -173,7 +173,7 @@ describe('Cookie policy page (#421)', () => {
     cy.get('[data-cy="cookie-version-stamp"]')
       .should('be.visible')
       .and('contain.text', 'Version')
-      .and('contain.text', '2026-05-05');
+      .and('contain.text', '2026-11-09');
   });
 
   it('language toggle on /cookie-policy points to /cookie-policy/it', () => {
@@ -209,7 +209,7 @@ describe('Cookie policy page (#421)', () => {
     cy.get('[data-cy="cookie-version-stamp"]')
       .should('be.visible')
       .and('contain.text', 'Versione')
-      .and('contain.text', '2026-05-05');
+      .and('contain.text', '2026-11-09');
   });
 
   it('language toggle on /cookie-policy/it points back to /cookie-policy', () => {

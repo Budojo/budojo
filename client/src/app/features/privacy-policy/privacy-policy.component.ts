@@ -15,8 +15,7 @@ import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-g
  * SubProcessors page documents:
  *
  *   1. `docs/legal/privacy-policy.md` — the canonical, auditor-readable
- *      markdown source. Auditors, the Garante, and the lawyer review
- *      this raw.
+ *      markdown source, the one an auditor or a lawyer would read.
  *   2. This component's HTML — English rendering, what an arbitrary
  *      visitor sees at /privacy.
  *   3. `it/privacy-policy-it.component.html` — Italian rendering at
@@ -43,8 +42,8 @@ import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-g
 export class PrivacyPolicyComponent {
   private readonly router = inject(Router);
 
-  protected readonly version = '0.1 (draft)';
-  protected readonly lastUpdated = '2026-04-30';
+  protected readonly version = '0.2 (draft)';
+  protected readonly lastUpdated = '2026-11-09';
 
   goHome(): void {
     this.router.navigateByUrl('/');

@@ -32,7 +32,7 @@ describe('AccountDeletionItComponent — Italian /account-deletion/it (#688)', (
     const stamp = root.querySelector('[data-cy="account-deletion-version-stamp"]');
     expect(stamp).toBeTruthy();
     expect(stamp?.textContent ?? '').toMatch(/Versione/);
-    expect(stamp?.textContent ?? '').toMatch(/2026-05-13/);
+    expect(stamp?.textContent ?? '').toMatch(/2026-11-09/);
   });
 
   it('language toggle points back to the canonical English /account-deletion', () => {
@@ -51,7 +51,7 @@ describe('AccountDeletionItComponent — Italian /account-deletion/it (#688)', (
     expect(activeMarker?.textContent?.trim()).toBe('Italiano');
   });
 
-  it('surfaces the privacy mailbox as the canonical request channel', () => {
+  it('keeps the privacy mailbox for questions about the software', () => {
     const { fixture } = setup();
     const root: HTMLElement = fixture.nativeElement;
 
@@ -59,11 +59,15 @@ describe('AccountDeletionItComponent — Italian /account-deletion/it (#688)', (
     expect(mailto).toBeTruthy();
   });
 
-  it('states the 30-day grace window in Italian', () => {
+  it('says in Italian there is no server account and where the data really is (#1255)', () => {
     const { fixture } = setup();
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    // Whitespace collapsed: the template wraps prose wherever prettier likes.
+    const text = ((fixture.nativeElement as HTMLElement).textContent ?? '').replace(/\s+/g, ' ');
 
-    expect(text).toContain('30 giorni');
+    expect(text).toContain("Non c'è un account Budojo da chiudere");
+    expect(text).toContain('%APPDATA%\\Budojo\\');
+    expect(text).toContain('Disinstallare non la tocca');
+    expect(text).not.toContain('30 giorni');
   });
 
   it('cross-links to the Italian privacy policy (legal source of truth)', () => {

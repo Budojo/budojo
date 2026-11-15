@@ -11,8 +11,8 @@ import { expectNoSidewaysScroll } from '../support/no-sideways-scroll';
  * Each page pins:
  *   - title + version stamp at the bottom
  *   - language toggle row
- *   - `mailto:privacy@budojo.it` as the canonical request channel
- *   - explicit 30-day grace window mention
+ *   - `mailto:privacy@budojo.it` for questions about the software
+ *   - the data folder an uninstall leaves behind (#1255: no server account)
  *   - back-home CTA navigates to /
  *   - layout fits on every mobile viewport (no horizontal overflow)
  */
@@ -27,7 +27,7 @@ describe('Account deletion — canonical English /account-deletion (#688)', () =
     cy.get('[data-cy="account-deletion-version-stamp"]')
       .should('be.visible')
       .and('contain.text', 'Version')
-      .and('contain.text', '2026-05-13');
+      .and('contain.text', '2026-11-09');
   });
 
   it('language toggle links to the Italian translation', () => {
@@ -38,13 +38,14 @@ describe('Account deletion — canonical English /account-deletion (#688)', () =
     );
   });
 
-  it('surfaces the privacy mailbox as the canonical request channel', () => {
+  it('keeps the privacy mailbox for questions about the software', () => {
     cy.get('a[href="mailto:privacy@budojo.it"]').should('exist');
   });
 
-  it('states the 30-day grace window for the Play reviewer to audit', () => {
-    cy.contains('30 days').should('exist');
-    cy.contains(/grace/i).should('exist');
+  it('names the data folder that an uninstall leaves behind (#1255)', () => {
+    cy.contains('There is no Budojo account to close').should('exist');
+    cy.contains('code', '%APPDATA%\\Budojo\\').should('exist');
+    cy.contains('Uninstalling does not touch it').should('exist');
   });
 
   it('cross-links to the privacy policy so the chain stays auditable', () => {
@@ -67,7 +68,7 @@ describe('Account deletion — Italian /account-deletion/it (#688)', () => {
     cy.get('[data-cy="account-deletion-version-stamp"]')
       .should('be.visible')
       .and('contain.text', 'Versione')
-      .and('contain.text', '2026-05-13');
+      .and('contain.text', '2026-11-09');
   });
 
   it('language toggle links back to the canonical /account-deletion', () => {
@@ -78,8 +79,9 @@ describe('Account deletion — Italian /account-deletion/it (#688)', () => {
     );
   });
 
-  it('states the 30-day grace window in Italian', () => {
-    cy.contains('30 giorni').should('exist');
+  it('names the data folder in Italian (#1255)', () => {
+    cy.contains("Non c'è un account Budojo da chiudere").should('exist');
+    cy.contains('code', '%APPDATA%\\Budojo\\').should('exist');
   });
 
   it('the back-home CTA navigates to / (the public landing since #330)', () => {

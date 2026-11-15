@@ -34,8 +34,8 @@ import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/bran
 export class AccountDeletionItComponent {
   private readonly router = inject(Router);
 
-  protected readonly version = '1.0';
-  protected readonly lastUpdated = '2026-05-13';
+  protected readonly version = '2.0';
+  protected readonly lastUpdated = '2026-11-09';
 
   goHome(): void {
     this.router.navigateByUrl('/');

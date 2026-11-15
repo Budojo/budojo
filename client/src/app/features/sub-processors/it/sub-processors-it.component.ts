@@ -46,7 +46,7 @@ import { BrandGlyphComponent } from '../../../shared/components/brand-glyph/bran
 export class SubProcessorsItComponent {
   private readonly router = inject(Router);
 
-  protected readonly lastUpdated = '2026-04-29';
+  protected readonly lastUpdated = '2026-11-09';
 
   goHome(): void {
     this.router.navigateByUrl('/');

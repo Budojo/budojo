@@ -4,6 +4,7 @@ import { ButtonModule } from 'primeng/button';
 
 import { BrandGlyphComponent } from '../../shared/components/brand-glyph/brand-glyph.component';
 import { ConsentService } from '../../core/services/consent.service';
+import { RuntimeService } from '../../core/services/runtime.service';
 
 /**
  * Public `/cookie-policy` page (#421) — English-default to match
@@ -33,9 +34,11 @@ import { ConsentService } from '../../core/services/consent.service';
 export class CookiePolicyComponent {
   private readonly router = inject(Router);
   private readonly consent = inject(ConsentService);
+  /** The consent section shows only where the banner is mounted: the web profile (#1508). */
+  protected readonly runtime = inject(RuntimeService);
 
-  protected readonly version = '1.0';
-  protected readonly lastUpdated = '2026-05-05';
+  protected readonly version = '2.0';
+  protected readonly lastUpdated = '2026-11-09';
 
   goHome(): void {
     this.router.navigateByUrl('/');

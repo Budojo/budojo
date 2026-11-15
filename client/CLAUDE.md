@@ -112,7 +112,7 @@ The SPA runs `@ngx-translate/core` with a synchronous bundled-JSON loader. EN is
 - **Don't dynamically build translation keys with template strings** (`'errors.' + code`) without an explicit map of allowed keys — the JSON parity check can't see them and the IT translation drifts silently.
 - **The parity check confirms key sets match, NOT that template paths resolve.** A typo in a template ships green and renders the raw key on prod. The usual victims are empty-state / error branches that specs don't cover.
 
-Roadmap (#271) adds Spanish + German next; framework is multi-locale-ready.
+Spanish and German (#271) are frozen: nobody needs them on a single-owner app. The framework is multi-locale-ready, so a third locale stays cheap the day someone asks.
 
 ### The anti-slop check (#1786)
 
@@ -180,21 +180,6 @@ A reviewer should push back when they see:
 
 ## Client structure conventions
 
-```
-client/src/app/
-├── core/
-│   ├── guards/        # Functional route guards (authGuard, hasAcademyGuard, noAcademyGuard)
-│   ├── interceptors/  # Functional HTTP interceptors (authInterceptor)
-│   └── services/      # AuthService, AcademyService, AthleteService, DocumentService — HTTP only here
-├── features/
-│   ├── auth/          # Login, Register pages
-│   ├── academy/       # Setup page
-│   ├── athletes/      # List, Form, Detail pages
-│   └── dashboard/     # Layout shell (sidebar + router-outlet)
-└── shared/
-    └── components/    # BeltBadge, ExpiryStatusBadge, and other reusable presentational components
-```
-
 - Feature folders under `src/app/features/<feature>/`.
 - HTTP calls only in `*.service.ts` — never in components.
 - Components use **OnPush** change detection by default (no exceptions without a comment).
@@ -206,23 +191,7 @@ client/src/app/
 
 ## UI — PrimeNG 21 with the Material preset
 
-All UI from **PrimeNG 21**. Preset: `Material` (from `@primeuix/themes/material`), configured in `client/src/app/app.config.ts`:
-
-```typescript
-import Material from '@primeuix/themes/material';
-
-providePrimeNG({
-  theme: {
-    preset: Material,
-    options: {
-      darkModeSelector: '.dark',
-      // Load-bearing: without the layer, PrimeNG's <style> lands after ours,
-      // both hit `:root` at equal specificity, and source order silently wins.
-      cssLayer: { name: 'primeng' },
-    },
-  },
-});
-```
+All UI from **PrimeNG 21**. Preset: `Material` (from `@primeuix/themes/material`), configured in `client/src/app/core/config/shared-ui-providers.ts`. Its `cssLayer: { name: 'primeng' }` is load-bearing; the comment there says why.
 
 - Check [primeng.org](https://primeng.org/) before rolling custom — 9 times out of 10 there's a component.
 - No inline styles. (PrimeFlex is **not** installed — this line used to recommend it.)

@@ -34,7 +34,7 @@ describe('PrivacyPolicyComponent — canonical English /privacy (#291)', () => {
     const stamp = root.querySelector('[data-cy="privacy-version-stamp"]');
     expect(stamp).toBeTruthy();
     expect(stamp?.textContent ?? '').toMatch(/Version/);
-    expect(stamp?.textContent ?? '').toMatch(/2026-04-30/);
+    expect(stamp?.textContent ?? '').toMatch(/2026-11-09/);
   });
 
   it('language toggle points to the Italian translation at /privacy/it', () => {
@@ -53,11 +53,25 @@ describe('PrivacyPolicyComponent — canonical English /privacy (#291)', () => {
     expect(activeMarker?.textContent?.trim()).toBe('English');
   });
 
-  it('links to the canonical sub-processors page (English-only today)', () => {
+  it('links to the sub-processors, cookie and deletion pages', () => {
     const { fixture } = setup();
     const root: HTMLElement = fixture.nativeElement;
-    const link = root.querySelector('a[routerLink="/sub-processors"], a[href="/sub-processors"]');
-    expect(link).toBeTruthy();
+    expect(root.querySelector('a[routerLink="/sub-processors"]')).toBeTruthy();
+    expect(root.querySelector('a[routerLink="/cookie-policy"]')).toBeTruthy();
+    expect(root.querySelector('a[routerLink="/account-deletion"]')).toBeTruthy();
+  });
+
+  it('names the academy as the data controller and Budojo as no processor (#1255)', () => {
+    // Whitespace collapsed: the template wraps prose wherever prettier likes.
+    const text = ((setup().fixture.nativeElement as HTMLElement).textContent ?? '').replace(
+      /\s+/g,
+      ' ',
+    );
+
+    expect(text).toContain('data controller');
+    expect(text).toContain('are not a processor of it');
+    // The hosted stack is gone (#1230): no page may name it as where data lives.
+    expect(text).not.toContain('DigitalOcean');
   });
 
   it('CTA navigates back to the root', () => {
