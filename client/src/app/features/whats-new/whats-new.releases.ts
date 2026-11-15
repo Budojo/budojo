@@ -83,8 +83,8 @@ export const RELEASES: readonly Release[] = [
             it: "Dicono cosa esce dal dispositivo: a Google solo se colleghi l'account, per il backup e la sincronizzazione; a GitHub solo l'indirizzo del dispositivo, quando l'app cerca gli aggiornamenti. Nessun cookie.",
           },
           {
-            en: 'They explain how to remove everything: the folder left on the PC after uninstalling, the app on the phone, and the folder on Google Drive. That folder keeps a first full copy until you delete it.',
-            it: "Spiegano come cancellare tutto: la cartella che resta sul PC dopo la disinstallazione, l'app sul telefono, e la cartella su Google Drive. Quella cartella conserva una prima copia completa finché non la cancelli.",
+            en: 'They explain how to remove everything: the folder left on the PC after uninstalling, the app on the phone, and the folders on Google Drive. With the phone sync on, the Budojo/sync folder keeps a first full copy until you delete it.',
+            it: "Spiegano come cancellare tutto: la cartella che resta sul PC dopo la disinstallazione, l'app sul telefono, e le cartelle su Google Drive. Con la sincronizzazione del telefono attiva, la cartella Budojo/sync conserva una prima copia completa finché non la cancelli.",
           },
           {
             en: 'The top of the privacy notice says it is a technical draft, not reviewed by a lawyer.',
