@@ -114,18 +114,6 @@ Agile is the XP practices, not the corporate ceremony grafted on in 2010:
 
 ## Server structure conventions
 
-```
-server/app/
-├── Actions/        # Single-responsibility business operations (CreateAcademyAction, UploadDocumentAction)
-├── Enums/          # Backed PHP enums (Belt, AthleteStatus, DocumentType)
-├── Http/
-│   ├── Controllers/  # Thin — validate via FormRequest, call Action, return Resource
-│   ├── Requests/     # All input validation lives here, never in controllers
-│   └── Resources/    # All API response shaping — never return raw Eloquent models
-├── Models/         # Eloquent — relations, scopes, casts only; no business logic
-└── Observers/      # Event handlers (wired via #[ObservedBy] attribute)
-```
-
 - **Controllers** — thin: receive request → delegate to Action → return Resource.
 - **Actions** — one class, one operation, one public `execute(...)`. All business logic.
 - **FormRequests** — validation + authorisation. `authorize()` = user/academy/ownership, `rules()` = input shape.
