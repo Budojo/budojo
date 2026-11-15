@@ -60,6 +60,41 @@ export function localised(value: Localised, lang: string): string {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: 'v2.81.2',
+    date: '2026-11-15',
+    headline: {
+      en: 'The privacy notice and the other legal pages now say what the app really does on the PC and the phone.',
+      it: "L'informativa sulla privacy e le altre pagine legali ora dicono cosa fa davvero l'app sul PC e sul telefono.",
+    },
+    sections: [
+      {
+        heading: { en: 'Privacy', it: 'Privacy' },
+        bullets: [
+          {
+            en: 'The four legal pages are rewritten: the privacy notice, the sub-processors, the cookies and account deletion. They still described the old online service and never named Google Drive.',
+            it: "Le quattro pagine legali sono riscritte: l'informativa sulla privacy, i sub-processor, i cookie e l'eliminazione dell'account. Prima descrivevano ancora il vecchio servizio online e non nominavano Google Drive.",
+          },
+          {
+            en: 'They say the data stays on the PC and the phone, and that the gym is the data controller. Budojo receives nothing.',
+            it: 'Dicono che i dati restano sul PC e sul telefono, e che il titolare è la palestra. Budojo non riceve niente.',
+          },
+          {
+            en: "They say what leaves the device: Google only if you connect the account, for backup and sync; GitHub only the device's address, when the app looks for updates. No cookies.",
+            it: "Dicono cosa esce dal dispositivo: a Google solo se colleghi l'account, per il backup e la sincronizzazione; a GitHub solo l'indirizzo del dispositivo, quando l'app cerca gli aggiornamenti. Nessun cookie.",
+          },
+          {
+            en: 'They explain how to remove everything: the folder left on the PC after uninstalling, the app on the phone, and the folder on Google Drive. That folder keeps a first full copy until you delete it.',
+            it: "Spiegano come cancellare tutto: la cartella che resta sul PC dopo la disinstallazione, l'app sul telefono, e la cartella su Google Drive. Quella cartella conserva una prima copia completa finché non la cancelli.",
+          },
+          {
+            en: 'The top of the privacy notice says it is a technical draft, not reviewed by a lawyer.',
+            it: "In cima all'informativa c'è scritto che è una bozza tecnica, non rivista da un legale.",
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: 'v2.81.1',
     date: '2026-11-06',
     headline: {
